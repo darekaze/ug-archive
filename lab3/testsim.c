@@ -30,7 +30,7 @@ char* printPattern(char);
 
 int simulation(int,int,char);
 void randomPicker(int);
-
+void tester(int);
 
 int main(int argc, char *argv[]) {
     int numChild = atoi(argv[1]);
@@ -44,6 +44,7 @@ int main(int argc, char *argv[]) {
         printf("%d tasks\n", task);
         simMode(task, argv+1);
     }
+    return 0;
 }
 
 
@@ -87,7 +88,6 @@ void simMode(int task, char *argv[]) {
                 int total = atoi(argv[j]);
                 int seed = atoi(argv[j+1]);
                 int ptrn = argv[j+2][0];
-
                 int res = simulation(total, seed, ptrn);
                 printf("Child %d, pid %d: seed = %d, %d %s out of %d hands, p = %.3f\n",
                      i+1, getpid(), seed, res, printPattern(ptrn), total, (float)res / (float)total );
@@ -104,7 +104,8 @@ int simulation(int num, int seed, char r) {
     int count = 0;
     char res;
     for(int i = 0; i < num; i++) {
-        randomPicker(seed);
+        // randomPicker(seed);
+        tester(seed);
         analyze();
         res = findPattern();
         if(r == res)
@@ -113,21 +114,43 @@ int simulation(int num, int seed, char r) {
     return count;
 }
 
-void randomPicker(int seed) {
-    int used[RANKS*SUITS] = {0};
+void tester(int seed) {
     for (int i = 0; i < RANKS; i++) 
         numInRank[i] = 0;
     for (int i = 0; i < SUITS; i++)
         numInSuit[i] = 0;
 
-    srand(seed);
-    for (int i = 1; i < NUM_CARDS;i++) {
+    // numInRank[0]++;
+    // numInRank[1]++;
+    numInRank[2]++;
+    numInRank[3]=2;
+    numInRank[4]=2;
+    numInSuit[1]=2;
+    numInSuit[2]=3;
+
+}
+
+// Big bug here!!! cannot random 
+void randomPicker(int seed) {
+    for (int i = 0; i < RANKS; i++) 
+        numInRank[i] = 0;
+    for (int i = 0; i < SUITS; i++)
+        numInSuit[i] = 0;
+
+    int used[RANKS*SUITS] = {0};
+    srand((unsigned)seed);
+    for (int i = 0; i < NUM_CARDS;i++) {
         int p = rand() % 52;
         while(used[p]) p = rand() % 52;
         used[p] = 1;
         numInRank[p/4]++;
+        if (numInRank[p/4] >1) {
+            printf("w");
+        }
         numInSuit[p%4]++;
+        printf("%d ",p);
     }
+    printf("\n");
 }
 
 void readCards(char *card[]) {
