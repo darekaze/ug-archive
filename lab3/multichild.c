@@ -19,6 +19,10 @@ int main(int argc, char *argv[]) {
         } else if (pid == 0) {
             // Child do sth
             val++;
+            char x = 's';
+            char y = 'b';
+            x = 'b';
+            if(x == y) printf("%d\n",i);
             printf("Child (%d): %d, %d\n", i+1, getpid(),val);
             exit(0);
         }
