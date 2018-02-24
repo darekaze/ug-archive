@@ -17,7 +17,7 @@ typedef enum {false, true} bool;
 int numInRank[RANKS];
 int numInSuit[SUITS];
 bool straight, flush, four, three;
-int pairs;   /* can be 0, 1, or 2 */
+int pairs;   /* 0, 1, or 2 */
 
 /* prototypes */
 void devMode(char *[]);
@@ -29,8 +29,9 @@ char findPattern(void);
 char* printPattern(char);
 
 int simulation(int,int,char);
-void randomPicker(int);
+void randomPicker(void);
 void tester(int);
+
 
 int main(int argc, char *argv[]) {
     int numChild = atoi(argv[1]);
@@ -46,7 +47,6 @@ int main(int argc, char *argv[]) {
     }
     return 0;
 }
-
 
 /* Development mode */
 void devMode(char *argv[]) {
@@ -75,7 +75,6 @@ void devMode(char *argv[]) {
 
 /* Simulation mode */
 void simMode(int task, char *argv[]) {
-
     int pid;
     for(int i = 0; i < atoi(argv[0]); i++) {
         pid = fork();
@@ -84,14 +83,20 @@ void simMode(int task, char *argv[]) {
             exit(1);
         } 
         else if (pid == 0) {
-            for(int j = 1+(i*3); j < (task*3); j = j + (atoi(argv[0])*3)) {
-                int total = atoi(argv[j]);
-                int seed = atoi(argv[j+1]);
-                int ptrn = argv[j+2][0];
-                int res = simulation(total, seed, ptrn);
-                printf("Child %d, pid %d: seed = %d, %d %s out of %d hands, p = %.3f\n",
-                     i+1, getpid(), seed, res, printPattern(ptrn), total, (float)res / (float)total );
-            }
+            int nArgs = task*3;
+            int startingPt = i*3 + 1;
+            if( startingPt < nArgs ){
+                for(int j = startingPt; j < nArgs; j = j + (atoi(argv[0])*3)) {
+                    int total = atoi(argv[j]);
+                    int seed = atoi(argv[j+1]);
+                    int ptrn = argv[j+2][0];
+                    int res = simulation(total, seed, ptrn);
+                    double prop = ((double)res / (double)total) * 100;
+                    printf("Child %d, pid %d: seed = %d, %d %s out of %d hands, p = %.3f\%\n",
+                        i+1, getpid(), seed, res, printPattern(ptrn), total, prop );
+                }
+            } else
+                printf("Child %d, pid %d: no task\n", i+1, getpid());
             exit(0);
         }
     }
@@ -100,12 +105,13 @@ void simMode(int task, char *argv[]) {
         wait(&stat);
 }
 
+/* simulate num times and return the no. of occurrance */
 int simulation(int num, int seed, char r) {
     int count = 0;
     char res;
+    srand(seed);
     for(int i = 0; i < num; i++) {
-        // randomPicker(seed);
-        tester(seed);
+        randomPicker();
         analyze();
         res = findPattern();
         if(r == res)
@@ -114,62 +120,39 @@ int simulation(int num, int seed, char r) {
     return count;
 }
 
-void tester(int seed) {
-    for (int i = 0; i < RANKS; i++) 
-        numInRank[i] = 0;
-    for (int i = 0; i < SUITS; i++)
-        numInSuit[i] = 0;
-
-    // numInRank[0]++;
-    // numInRank[1]++;
-    numInRank[2]++;
-    numInRank[3]=2;
-    numInRank[4]=2;
-    numInSuit[1]=2;
-    numInSuit[2]=3;
-
-}
-
-// Big bug here!!! cannot random 
-void randomPicker(int seed) {
+/* Pick 5 random card */
+void randomPicker(void) {
     for (int i = 0; i < RANKS; i++) 
         numInRank[i] = 0;
     for (int i = 0; i < SUITS; i++)
         numInSuit[i] = 0;
 
     int used[RANKS*SUITS] = {0};
-    srand((unsigned)seed);
     for (int i = 0; i < NUM_CARDS;i++) {
         int p = rand() % 52;
         while(used[p]) p = rand() % 52;
         used[p] = 1;
         numInRank[p/4]++;
-        if (numInRank[p/4] >1) {
-            printf("w");
-        }
         numInSuit[p%4]++;
-        printf("%d ",p);
     }
-    printf("\n");
 }
 
+/* Read the 5 cards from terminal input */
 void readCards(char *card[]) {
-    bool card_exists[RANKS][SUITS];
+    bool used[RANKS][SUITS];
     char ch, rank_ch, suit_ch;
     int rank, suit;
-    bool bad_card;
+    bool bad;
 
     for (rank = 0; rank < RANKS; rank++) {
         numInRank[rank] = 0;
         for (suit = 0; suit < SUITS; suit++)
-            card_exists[rank][suit] = false;
+            used[rank][suit] = false;
     }
-
     for (suit = 0; suit < SUITS; suit++)
         numInSuit[suit] = 0;
-
     for(int i = 0;i < NUM_CARDS; i++) {
-        bad_card = false;
+        bad = false;
         suit_ch = card[i][0];
         rank_ch = card[i][1];
 
@@ -178,7 +161,7 @@ void readCards(char *card[]) {
             case 'c': case 'C': suit = 1; break;
             case 'h': case 'H': suit = 2; break;
             case 's': case 'S': suit = 3; break;
-            default:            bad_card = true;
+            default:            bad = true;
         }
         switch (rank_ch) {
             case '0':           exit(EXIT_SUCCESS);
@@ -195,26 +178,26 @@ void readCards(char *card[]) {
             case 'q': case 'Q': rank = 10; break;
             case 'k': case 'K': rank = 11; break;
             case 'a': case 'A': rank = 12; break;
-            default:            bad_card = true;
+            default:            bad = true;
         }
-        if (bad_card) {
+        if (bad) {
             printf("Error: Bad card detected\n");
             exit(EXIT_FAILURE);
         } 
-        else if (card_exists[rank][suit]){
+        else if (used[rank][suit]){
             printf("ERROR: Duplicate card\n");
             exit(EXIT_FAILURE);
         }
         else {
             numInRank[rank]++;
             numInSuit[suit]++;
-            card_exists[rank][suit] = true;
+            used[rank][suit] = true;
         }
   }
 }
 
 void analyze(void) {
-    int num_consec = 0;
+    int sequence = 0;
     int rank, suit;
 
     straight = false;
@@ -223,22 +206,22 @@ void analyze(void) {
     three = false;
     pairs = 0;
 
-    /* check for flush */
+    /* check flush */
     for (suit = 0; suit < SUITS; suit++)
         if (numInSuit[suit] == NUM_CARDS)
         flush = true;
 
-    /* check for straight */
+    /* check straight */
     rank = 0;
     while (numInRank[rank] == 0) rank++;
         for (; rank < RANKS && numInRank[rank] > 0; rank++)
-            num_consec++;
-    if (num_consec == NUM_CARDS) {
+            sequence++;
+    if (sequence == NUM_CARDS) {
         straight = true;
         return;
     }
 
-    /* check for 4-of-a-kind, 3-of-a-kind, and pairs */
+    /* check 4,3 and pairs */
     for (rank = 0; rank < RANKS; rank++) {
         if (numInRank[rank] == 4) four = true;
         if (numInRank[rank] == 3) three = true;
@@ -246,6 +229,7 @@ void analyze(void) {
     }
 }
 
+/* Output the highest winning pattern*/
 char findPattern(void) {
     char res;
     if (straight && flush) res = 'R';
@@ -262,6 +246,7 @@ char findPattern(void) {
     return res;
 }
 
+/* Print out the winning pattern*/
 char* printPattern(char r) {
     if (r == 'R')       return "Royal-flush";
     else if (r == '4')  return "Four-of-a-kind";
