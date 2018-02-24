@@ -33,6 +33,9 @@ void randomPicker(void);
 void tester(int);
 
 
+/* Terminal input should be:
+ Devmode: ./cardsim <child no.> XX XX XX XX XX
+ Simmode ./cardsim <child no.> [<no. of sim> <seed> <Pattern>] ... */
 int main(int argc, char *argv[]) {
     int numChild = atoi(argv[1]);
     int myid = getpid();
