@@ -5,7 +5,7 @@
 
 typedef enum {east, west} area;
 
-struct Team {
+typedef struct team{
     area a;
     char name[4];
     char fullname[20];
@@ -14,14 +14,14 @@ struct Team {
     int rwin;
     int rlose;
     double pct;
-};
+    struct team* next;
+} teamList;
 
 
-
+// Use Linked list instead
 int main() {
     int	infd;
     int	num_subj, in_gp, sum_gp;
     char inbuf[256];
     int	err, num_char, i;
-    struct Team teams[4];
 }

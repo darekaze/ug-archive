@@ -137,8 +137,8 @@ void randomPicker(void) {
 
     int used[RANKS*SUITS] = {0};
     for (i = 0; i < NUM_CARDS;i++) {
-        int p = rand() % 52;
-        while(used[p]) p = rand() % 52;
+        int p = 51 - (rand() % 52);
+        while(used[p]) p = 51 - (rand() % 52);
         used[p] = 1;
         numInRank[p/4]++;
         numInSuit[p%4]++;
@@ -220,11 +220,23 @@ void analyze(void) {
         if (numInSuit[suit] == NUM_CARDS)
         flush = true;
 
+    /* check A2345 special straight */
+    if (numInRank[12] > 0) {
+        sequence = 1;
+        for (rank = 0; rank < 4 && numInRank[rank] > 0; rank++)
+            sequence++;
+        if (sequence == NUM_CARDS) {
+            straight = true;
+            return;
+        }
+    }
+
     /* check straight */
     rank = 0;
+    sequence = 0;
     while (numInRank[rank] == 0) rank++;
-        for (; rank < RANKS && numInRank[rank] > 0; rank++)
-            sequence++;
+    for (; rank < RANKS && numInRank[rank] > 0; rank++)
+        sequence++;
     if (sequence == NUM_CARDS) {
         straight = true;
         return;
