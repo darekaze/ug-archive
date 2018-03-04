@@ -18,6 +18,7 @@ int main()
   }
 
   sum_gp = 0; num_subj = 0;
+  inbuf[79] = '\0';
   while ((num_char = read(infd,inbuf,80)) > 0) {
       /* zero means EOF, print to debug */
       printf("Number of bytes read = %d\n",num_char);
@@ -36,13 +37,14 @@ int main()
 		  err = 1; break;
 	    /* this error message will go to the screen instead of the file */
          }
+         printf("%d %c\n",i,inbuf[i]);
          if (err == 0) {
             num_subj++;
             sum_gp = sum_gp + in_gp;
             printf("Grade for subject %d: %c\n", num_subj, inbuf[i]);
 	 }
 	 i++;
-	 while (i < num_char && (inbuf[i] < 'A' || inbuf[i] > 'Z')) i++;
+	    while (i < num_char && (inbuf[i] < 'A' || inbuf[i] > 'Z')) i++;
       }
   }
   printf("Your GPA for %d subjects is %5.2f\n", num_subj, (float)sum_gp/(float)num_subj);

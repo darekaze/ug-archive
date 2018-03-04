@@ -1,1 +1,1 @@
-3ABCD
+3 A B C D
