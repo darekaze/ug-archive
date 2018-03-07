@@ -18,23 +18,80 @@ struct team{
     int hlose;
     int rwin;
     int rlose;
-    double pct;
+    int pct;
     double netWin;
 };
 
 void insert(struct team **head, char abbr[], char full[]) {
     struct team * newTeam = NULL;
     newTeam = (struct team *)malloc(sizeof(struct team));
-
     if (newTeam == NULL) {
         printf("Error: Out of memory..");
     }
-
     strcpy(newTeam->abbr, abbr);
     strcpy(newTeam->fullname, full);
     newTeam->next = *head;
 
     *head = newTeam;
+}
+
+void recordStat(struct team *head, char key[], int stat) {
+    while (head) {
+        if (strcmp(head->abbr, key) == 0) {
+            switch(stat) {
+                case 1: head->rwin++; break;
+                case 2: head->rlose++; break;
+                case 3: head->hwin++; break;
+                case 4: head->hlose++; break;
+                default: break;
+            }
+            return;
+        }
+        head = head->next;
+    }
+}
+
+void calcStat(struct team *head) {
+    while (head) {
+        // calculate pct
+        int t = (head->rwin) + (head->rlose) + (head->hwin) + (head->hlose);
+        if(t != 0)
+            head->pct = ((head->rwin) + (head->hwin)) * 1000 / t;
+        // calculate netWin
+        head->netWin = (double)((head->rwin) + (head->hwin) - (head->rlose) - (head->hlose)) / 2.0;
+        head = head->next;
+    }
+}
+
+void sort(struct team **head, struct team *newTeam) {
+    struct team *temp = NULL;
+
+    if(*head == NULL || newTeam->netWin >= (*head)->netWin) {
+        newTeam->next = *head;
+        *head = newTeam;
+        return;
+    }
+
+    temp = *head;
+    while(temp->next && newTeam->netWin < temp->next->netWin) {
+        temp = temp->next;
+    }
+
+    newTeam->next = temp->next;
+    temp->next = newTeam;
+}
+
+void sortList(struct team **head) {
+    struct team *new_head = NULL;
+    struct team *temp = *head;
+    struct team *temp1 = NULL;
+
+    while(temp) {
+        temp1 = temp;
+        temp = temp->next;
+        sort(&new_head, temp1);
+    }
+    *head = new_head;
 }
 
 void print_list(struct team *head) {
@@ -46,25 +103,8 @@ void print_list(struct team *head) {
     printf("|||\n");
 }
 
-void recordStat(struct team *head, char key[], int stat) {
-    while (head != NULL) {
-        if (strcmp(head->abbr, key) == 0) {
-            // printf("key:%s has found\n", key);
-            switch(stat) {
-                case 1: head->rwin++; break;
-                case 2: head->rlose++; break;
-                case 3: head->hwin++; break;
-                case 4: head->hlose++; break;
-                default: break;
-            }
-            // printf("%s Stat: %d-%d, %d-%d\n",key,head->rwin,head->rlose,head->hwin,head->hlose);
-            return;
-        }
-        head = head->next;
-    }
-}
+/* --------- Main ------------ */ 
 
-// Use Linked list instead
 int main(int argc, char *argv[]) {
     int	infd, n;
     char inbuf[513];
@@ -73,9 +113,9 @@ int main(int argc, char *argv[]) {
     struct team *west = NULL;
     glob_t globbuff;
 
-    infd = open(argv[1],O_RDONLY); /* read only */
+    infd = open(argv[1],O_RDONLY);
     if (infd < 0) {
-        printf("Error in opening input file\n");
+        printf("Error: cannot open input file\n");
         exit(1);
     }
 
@@ -86,8 +126,7 @@ int main(int argc, char *argv[]) {
         j = 0;
         inbuf[512] = '\0';
 
-        // Skip space
-        while(inbuf[i] == ' ') i++;
+        while(inbuf[i] == ' ') i++; // Skip space
         // Read line
         while (i < num_char){
             char abbr[4]="", fn[21]="", area[8]="";
@@ -99,8 +138,7 @@ int main(int argc, char *argv[]) {
                 i++;
                 j++;
             }
-            // Skip space
-            while(inbuf[i] == ' ') i++;
+            while(inbuf[i] == ' ') i++; // Skip space
             // Read full name
             j = 0;
             while(inbuf[i] != ' ') {
@@ -124,19 +162,18 @@ int main(int argc, char *argv[]) {
                 insert(&east,abbr,fn);
             else if (strcmp(area, "Western") == 0)
                 insert(&west,abbr,fn);
-            // Ready for next line
-            while(inbuf[i] == ' ' || inbuf[i] == '\n') i++;
+            while(inbuf[i] == ' ' || inbuf[i] == '\n') i++; // Ready for next line
         }
     }
     close(infd);
 
-    // print_list(east);
-    // print_list(west);
-
     // Read score data
     strcat(argv[2],"*");
-    if(glob(argv[2], 0, NULL, &globbuff))
+    if(glob(argv[2], 0, NULL, &globbuff)) {
         printf("Can't find any file");
+        exit(1);
+    }
+
     for(n = 0;n < globbuff.gl_pathc; n++) {
         infd = open(globbuff.gl_pathv[n],O_RDONLY);
         while ((num_char = read(infd,inbuf,512)) > 0) {
@@ -208,12 +245,14 @@ int main(int argc, char *argv[]) {
     }
     globfree(&globbuff);
 
-    // TODO: Calculation part
+    calcStat(east);
+    calcStat(west);
 
+    sortList(&east);
+    sortList(&west);
     
-    // Sort part
-    // Print Part
-    
+    print_list(east);
+    print_list(west);
     
     return 0;
 }
