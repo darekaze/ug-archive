@@ -5,6 +5,11 @@
 #include <string.h>
 #include <glob.h>
 
+#define R_WIN 1
+#define R_LOSE 2
+#define H_WIN 3
+#define H_LOSE 4
+
 struct team{
     struct team *next;
     char abbr[4];
@@ -34,13 +39,29 @@ void insert(struct team **head, char abbr[], char full[]) {
 
 void print_list(struct team *head) {
     printf("H->");
-
     while(head) {
         printf("%s->", head->abbr);
         head = head->next;
     }
-
     printf("|||\n");
+}
+
+void recordStat(struct team *head, char key[], int stat) {
+    while (head != NULL) {
+        if (strcmp(head->abbr, key) == 0) {
+            // printf("key:%s has found\n", key);
+            switch(stat) {
+                case 1: head->rwin++; break;
+                case 2: head->rlose++; break;
+                case 3: head->hwin++; break;
+                case 4: head->hlose++; break;
+                default: break;
+            }
+            // printf("%s Stat: %d-%d, %d-%d\n",key,head->rwin,head->rlose,head->hwin,head->hlose);
+            return;
+        }
+        head = head->next;
+    }
 }
 
 // Use Linked list instead
@@ -112,23 +133,88 @@ int main(int argc, char *argv[]) {
     // print_list(east);
     // print_list(west);
 
+    // Read score data
     strcat(argv[2],"*");
-    if(glob(argv[2], 0, NULL, &globbuff)) {
+    if(glob(argv[2], 0, NULL, &globbuff))
         printf("Can't find any file");
-    }
     for(n = 0;n < globbuff.gl_pathc; n++) {
-        infd = open(globbuff.gl_pathv[i],O_RDONLY);
+        infd = open(globbuff.gl_pathv[n],O_RDONLY);
         while ((num_char = read(infd,inbuf,512)) > 0) {
-            // TODO: Compare and record score
+            i = 0;
+            j = 0;
+            inbuf[512] = '\0';
+            // Skip space
+            while(inbuf[i] == ' ') i++;
+            // Read line
+            while (i < num_char){
+                char home[4]="", road[4]="";
+                char hs[4]="", rs[4]="";
+                int hscore, rscore;
+                
+                // Read road abbr
+                j = 0;
+                while(inbuf[i] != ' ') {
+                    road[j] = inbuf[i];
+                    i++;
+                    j++;
+                }
+                while(inbuf[i] == ' ') i++; // Skip space
+                // Read road score
+                j = 0;
+                while(inbuf[i] != ' ') {
+                    rs[j] = inbuf[i];
+                    i++;
+                    j++;
+                }
+                while(inbuf[i] == ' ') i++; // Skip space
+                // Read home abbr
+                j = 0;
+                while(inbuf[i] != ' ') {
+                    home[j] = inbuf[i];
+                    i++;
+                    j++;
+                }
+                while(inbuf[i] == ' ') i++; // Skip space
+                // Read home score
+                j = 0;
+                while(inbuf[i] != '\n') {
+                    hs[j] = inbuf[i];
+                    i++;
+                    j++;
+                }
+                hscore = atoi(hs);
+                rscore = atoi(rs);
+
+                // Compare and record score
+                if(rscore > hscore) {
+                    // rwin++, hlose++
+                    recordStat(east, road, R_WIN);
+                    recordStat(west, road, R_WIN);
+                    recordStat(east, home, H_LOSE);
+                    recordStat(west, home, H_LOSE);
+                } else {
+                    // rlose++, hwin++
+                    recordStat(east, road, R_LOSE);
+                    recordStat(west, road, R_LOSE);
+                    recordStat(east, home, H_WIN);
+                    recordStat(west, home, H_WIN);
+                }
+                // printf("%s %d %s %d\n\n",road,rscore,home,hscore);
+
+                while(inbuf[i] == ' ' || inbuf[i] == '\n') i++; // Ready for next line
+            }
         }
         close(infd);
     }
+    globfree(&globbuff);
 
     // TODO: Calculation part
+
+    
     // Sort part
     // Print Part
     
-    globfree(&globbuff);
+    
     return 0;
 }
 
