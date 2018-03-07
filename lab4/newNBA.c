@@ -95,12 +95,22 @@ void sortList(struct team **head) {
 }
 
 void print_list(struct team *head) {
-    printf("H->");
+    double hnw = head->netWin, gb;
+    int rank = 1;
+    int w, l;
+
+    printf("Rank\tTeam\t\tW\tL\tPCT\tGB\tHOME\tROAD\n");
     while(head) {
-        printf("%s->", head->abbr);
+        w = head->hwin + head->rwin;
+        l = head->hlose + head-> rlose;
+        gb = hnw - head->netWin;
+        printf("%-6.d %-16s %d\t%d\t%d\t%.1lf\t%d-%d\t%d-%d\n", 
+            rank, head->fullname, w, l, head->pct, gb, 
+            head->hwin, head->hlose,head->rwin,head->rlose);
         head = head->next;
+        rank++;
     }
-    printf("|||\n");
+    printf("\n");
 }
 
 /* --------- Main ------------ */ 
@@ -173,7 +183,6 @@ int main(int argc, char *argv[]) {
         printf("Can't find any file");
         exit(1);
     }
-
     for(n = 0;n < globbuff.gl_pathc; n++) {
         infd = open(globbuff.gl_pathv[n],O_RDONLY);
         while ((num_char = read(infd,inbuf,512)) > 0) {
@@ -247,12 +256,14 @@ int main(int argc, char *argv[]) {
 
     calcStat(east);
     calcStat(west);
-
     sortList(&east);
     sortList(&west);
-    
-    print_list(east);
+
+    printf("\nWestern Conference\n");
     print_list(west);
+
+    printf("Eastern Conference\n");
+    print_list(east);
     
     return 0;
 }
