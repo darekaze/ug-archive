@@ -39,10 +39,10 @@ void recordStat(struct team *head, char key[], int stat) {
     while (head) {
         if (strcmp(head->abbr, key) == 0) {
             switch(stat) {
-                case 1: head->rwin++; break;
-                case 2: head->rlose++; break;
-                case 3: head->hwin++; break;
-                case 4: head->hlose++; break;
+                case R_WIN: head->rwin++; break;
+                case R_LOSE: head->rlose++; break;
+                case H_WIN: head->hwin++; break;
+                case H_LOSE: head->hlose++; break;
                 default: break;
             }
             return;
