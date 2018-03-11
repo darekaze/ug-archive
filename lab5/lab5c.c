@@ -23,7 +23,7 @@ int main()
             printf("Fork failed\n");
             exit(1);
       }
-      if (returnpid == 0)
+      else if (returnpid == 0)
       {                   /* child */
             close(fd[1]); /* close child out */
             while ((n = read(fd[0], buf, 80)) > 0)

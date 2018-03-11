@@ -21,12 +21,64 @@ int nextrand() {
     return (seed++ %99) + 1;
 }
 
+void startGame(int num, char deck[][3]) {
+    int pid, i;
+    int childToParent[2];
+    int parentToChild[2];
+
+    // Create pipe
+    if(pipe(childToParent) < 0 || pipe(parentToChild)) {
+            printf("Pipe creation error\n");
+            exit(1);
+    }
+    
+    // Fork
+    for(i = 0; i < num; i++) {
+        pid = fork();
+        if(pid < 0) {
+            printf("Error");
+            exit(1);
+        } 
+        else if (pid == 0) { /* child */
+            close(parentToChild[1]);
+            close(childToParent[0]);
+            // Main functions
+            // TODO: Initialize hand to child
+            // Reduce function
+            // Ask card function (Go fish)
+
+
+            printf("Child %d, pid %d: no task\n", i+1, getpid());
+            exit(0);
+        }
+    }
+
+    if(pid > 0) { /* parent */
+        int loop = 1;
+        close(parentToChild[0]);
+        close(childToParent[1]);
+
+        while(loop) {
+            // Add parent control
+
+            // For Debug
+            loop = 0;
+            printf("Parent exit loop. PID: %d\n", getpid());
+        }
+        close(parentToChild[1]);
+        close(childToParent[0]);
+    }
+
+    /* prevent zombie */
+    int stat;
+    for(i = 0; i < num; i++)
+        wait(&stat);
+}
+
 
 int main(int argc, char *argv[]) {
     char inbuf[BUFFERSIZE];
     const int NUM_CHILD = atoi(argv[1]);
-    int child_to_parent[2];
-    int parent_to_child[2];
     char deck[52][3];
     int i, k, n;
 
@@ -45,5 +97,6 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    startGame(NUM_CHILD, deck);
     return 0;
 }
