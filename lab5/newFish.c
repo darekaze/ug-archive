@@ -5,35 +5,54 @@
 #include <sys/wait.h>
 #include <string.h>
 
-pid_t getpid(void);
-
 #define RANKS 13
 #define SUITS 4
 #define BUFFERSIZE 156
 
+pid_t getpid(void);
 int seed;
 
 void initrand(int myid) {
-    seed=myid-1;
+    seed = myid - 1;
 }
 
 int nextrand() {
-    return (seed++ %99) + 1;
+    return (seed++ % 99) + 1;
 }
 
-void startGame(int num, char deck[][3]) {
+void readDeck(char (*deck)[3]) {
+    char inbuf[BUFFERSIZE];
+    int i, k, n;
+
+    // Read < .txt file
+    while((n = read(STDIN_FILENO, inbuf, BUFFERSIZE)) > 0) {
+        i = 0, k = 0;
+        inbuf[n] = '\0';
+        while(i < n && inbuf[i] == ' ') i++;
+        while (i < n) {
+            deck[k][2] = '\0';
+            deck[k][0] = inbuf[i++];
+            deck[k][1] = inbuf[i++];
+            k++;
+            while(i < n && (inbuf[i] == ' ' || inbuf[i] == '\n')) i++;
+        }
+    }
+}
+
+void startGame(const int N_CHILD, char (*deck)[3]) {
     int pid, i;
     int childToParent[2];
     int parentToChild[2];
+    char inbuf[BUFFERSIZE];
 
     // Create pipe
     if(pipe(childToParent) < 0 || pipe(parentToChild)) {
-            printf("Pipe creation error\n");
-            exit(1);
+        printf("Pipe creation error\n");
+        exit(1);
     }
     
     // Fork
-    for(i = 0; i < num; i++) {
+    for(i = 0; i < N_CHILD; i++) {
         pid = fork();
         if(pid < 0) {
             printf("Error");
@@ -71,32 +90,15 @@ void startGame(int num, char deck[][3]) {
 
     /* prevent zombie */
     int stat;
-    for(i = 0; i < num; i++)
+    for(i = 0; i < N_CHILD; i++)
         wait(&stat);
 }
 
 
 int main(int argc, char *argv[]) {
-    char inbuf[BUFFERSIZE];
-    const int NUM_CHILD = atoi(argv[1]);
     char deck[52][3];
-    int i, k, n;
 
-    // Read < .txt file
-    while((n = read(STDIN_FILENO, inbuf, BUFFERSIZE)) > 0) {
-        i = 0, k = 0;
-        inbuf[n] = '\0';
-        while(i < n && inbuf[i] == ' ') i++;
-        while (i < n) {
-            deck[k][2] = '\0';
-            deck[k][0] = inbuf[i++];
-            deck[k][1] = inbuf[i++];
-            // printf("%s\n", deck[k]);
-            k++;
-            while(i < n && (inbuf[i] == ' ' || inbuf[i] == '\n')) i++;
-        }
-    }
-
-    startGame(NUM_CHILD, deck);
+    readDeck(deck);
+    startGame(atoi(argv[1]), deck);
     return 0;
 }
