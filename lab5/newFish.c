@@ -5,12 +5,18 @@
 #include <sys/wait.h>
 #include <string.h>
 
-#define RANKS 13
-#define SUITS 4
-#define BUFFERSIZE 156
+#define BIG_BUF 156
+#define SMALL_BUF 6
 
 pid_t getpid(void);
 int seed;
+
+struct Card {
+    char code[3];
+    int rank;
+    int suit;
+    struct Card *next;
+};
 
 void initrand(int myid) {
     seed = myid - 1;
@@ -21,11 +27,11 @@ int nextrand() {
 }
 
 void readDeck(char (*deck)[3]) {
-    char inbuf[BUFFERSIZE];
+    char inbuf[BIG_BUF];
     int i, k, n;
 
     // Read < .txt file
-    while((n = read(STDIN_FILENO, inbuf, BUFFERSIZE)) > 0) {
+    while((n = read(STDIN_FILENO, inbuf, BIG_BUF)) > 0) {
         i = 0, k = 0;
         inbuf[n] = '\0';
         while(i < n && inbuf[i] == ' ') i++;
@@ -39,22 +45,72 @@ void readDeck(char (*deck)[3]) {
     }
 }
 
+void insertToHand(struct Card **head, char buf[]) {
+    struct Card *newCard = (struct Card *)malloc(sizeof(struct Card));
 
+    strcpy(newCard->code, buf);
+    switch (buf[0]) {
+        case 'd': case 'D': newCard->suit = 0; break;
+        case 'c': case 'C': newCard->suit = 1; break;
+        case 'h': case 'H': newCard->suit = 2; break;
+        case 's': case 'S': newCard->suit = 3; break;
+        default:            break;
+    }
+    switch (buf[1]) {
+        case '0':           exit(EXIT_SUCCESS);
+        case '2':           newCard->rank = 0; break;
+        case '3':           newCard->rank = 1; break;
+        case '4':           newCard->rank = 2; break;
+        case '5':           newCard->rank = 3; break;
+        case '6':           newCard->rank = 4; break;
+        case '7':           newCard->rank = 5; break;
+        case '8':           newCard->rank = 6; break;
+        case '9':           newCard->rank = 7; break;
+        case 't': case 'T': newCard->rank = 8; break;
+        case 'j': case 'J': newCard->rank = 9; break;
+        case 'q': case 'Q': newCard->rank = 10; break;
+        case 'k': case 'K': newCard->rank = 11; break;
+        case 'a': case 'A': newCard->rank = 12; break;
+        default:            break;
+    }
+    // TODO: insert with comparison
+    
 
-void startGame(const int N_CHILD, char (*deck)[3]) {
-    int pid, i;
-    int toParent[2];
-    int toChild[2];
-    char inbuf[BUFFERSIZE];
+    newCard->next = *head;
+    *head = newCard;
+}
+
+void initHand(int id, int *child, struct Card *head, int num) {
+    int i;
+    char buf[SMALL_BUF];
+
+    for(i = 0; i < num; i++) {
+        read(child[0], buf, SMALL_BUF);
+        insertToHand(&head, buf);
+    }
+    // sprintf for hands
+    printf("Child %d, pid %d: initial hand <%s> \n", id, getpid(), head->code);
+}
+
+void rdcHand(struct Card **hand, struct Card **reduced) {
+
+}
+
+void startGame(const int N_CHILD) {
+    int pid, i, j;
+    int toParent[N_CHILD][2];
+    int toChild[N_CHILD][2];
+    char cmdBuf[SMALL_BUF];
     pid_t shut_down[N_CHILD];
-    int playerTurn;
+    int nCard = (N_CHILD < 5) ? 7 : 5;
     
     // Create pipe
-    if(pipe(toParent) < 0 || pipe(toChild)) {
-        printf("Pipe creation error\n");
-        exit(1);
+    for(i = 0; i < N_CHILD; i++) {
+        if(pipe(toParent[i]) < 0 || pipe(toChild[i]) < 0) {
+            printf("Pipe creation error\n");
+            exit(1);
+        }
     }
-    
     // Fork
     for(i = 0; i < N_CHILD; i++) {
         pid = fork();
@@ -63,16 +119,38 @@ void startGame(const int N_CHILD, char (*deck)[3]) {
             exit(1);
         } 
         else if (pid == 0) { /* child */
-            close(toChild[1]);
-            close(toParent[0]);
-            // Main functions
-            // TODO: Initialize hand to child
-            
-            // Reduce function
-            // Ask card function (Go fish)
+            struct Card *hand = NULL;
+            struct Card *reduced = NULL;
+            // Close other unrelated pipe
+            for(j = 0; j < N_CHILD; j++){
+                close(toChild[j][1]);
+                close(toParent[j][0]);
+                if(j != i) {
+                    close(toChild[j][0]);
+                    close(toParent[j][1]);
+                }
+            }
+            // usable pipe-> read: toChild[i][0] write: toParent[i][1]
 
+            initHand(i+1, toChild[i], hand, nCard); // Get initial card
+            rdcHand(&hand, &reduced);
+            // Main functions -- need while loop here
 
-            printf("Child %d, pid %d: no task\n", i+1, getpid());
+            // TODO: checkReduce (3 situations, no need to write a function)
+            // 1. initial reduce
+            // 2. got card from another player then reduce
+            // 3. gofish reduce
+            //
+            // TODO: Ask card function (Go fish)
+            // Check if deck is empty
+            // TODO: check hand is empty, which stops the child process
+            // First one with most pair wins
+
+            printf("Child %d, pid %d: fin\n", i+1, getpid());
+
+            // Finish child process
+            close(toChild[i][0]);
+            close(toParent[i][1]);
             exit(0);
         }
         else {
@@ -82,41 +160,56 @@ void startGame(const int N_CHILD, char (*deck)[3]) {
 
     if(pid > 0) { /* parent */
         int loop = 1;
-        close(toChild[0]);
-        close(toParent[1]);
+        char deck[52][3];
 
-        printf("Parent: the child players are ");
-        for(i = 0; i < N_CHILD; i++){
-            printf("%d ", shut_down[i]);
+        // close useless pipe
+        for(i = 0; i < N_CHILD; i++) {
+            close(toChild[i][0]);
+            close(toParent[i][1]);
         }
+        
+        printf("Parent: the child players are ");
+        for(i = 0; i < N_CHILD; i++)
+            printf("%d ", shut_down[i]);
         printf("\n");
 
+        // usable pipe-> read: toParent[i][0] write: toChild[i][1]
+        readDeck(deck);
+        // Initialize player hand
+        for(i = 1; i <= nCard; i++)
+            for(j = 1; j <= N_CHILD; j++)
+                write(toChild[j-1][1], deck[(i*j)-1], SMALL_BUF);
+                
+
+        // Game loop
         while(loop) {
-            // Add parent control
+            // TODO: Add parent control
             // For Debug
             loop = 0;
             printf("Parent exit loop. PID: %d\n", getpid());
         }
-        close(toChild[1]);
-        close(toParent[0]);
+
+        // Close all pipe at the end
+        for(j = 0; j < N_CHILD; j++) {
+            close(toChild[j][1]);
+            close(toParent[j][0]);
+        }
     }
 
     /* prevent zombie */
     for(i = 0; i < N_CHILD; i++)
         waitpid(shut_down[i], NULL, 0);
-        
 }
 
 
 int main(int argc, char *argv[]) {
-    char deck[52][3];
     int nChild = atoi(argv[1]);
 
     if(nChild < 2 || nChild > 8) {
         printf("Player range should be 2 to 8...\n");
         return 0;
     }
-    readDeck(deck);
-    startGame(nChild, deck);
+     // should be done in parent
+    startGame(nChild);
     return 0;
 }
