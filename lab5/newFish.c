@@ -71,27 +71,21 @@ int cardRank(char c) {
     return r;
 }
 
-void insertToHand(char (*hand)[3], char buf[], int *handSize) {
-    int i, suit = suitRank(buf[0]), rank = cardRank(buf[1]);
-    printf("[%d]",*handSize);
-
-    for(i = *handSize-1; (i >= 0) && cardRank(*hand[i]) > rank; i--) {
-        strcpy(hand[i+1], hand[i]);
-    }
-    strcpy(hand[i+1], buf);
-    (*handSize)++;
-}
-
-void initHand(int id, int *child, int num, char (*hand)[3], int *handSize) {
+void initHand(int id, int *child, int num, char (*hand)[3]) {
     int i;
     char buf[SMALL_BUF];
 
     for(i = 0; i < num; i++) {
         read(child[0], buf, SMALL_BUF);
-        insertToHand(hand, buf, handSize);
+        strcpy(hand[i], buf);
     }
     // sprintf for hands
-    printf("Child %d, pid %d: initial hand <%s> \n", id, getpid(), hand[1]);
+
+    for(i = 0; i < sizeof(hand)/sizeof(*hand[0]); i++) {
+        printf("%s", hand[i]);
+    }
+    
+    printf("Child %d, pid %d: initial hand <%s> \n", id, getpid(), hand[3]);
 }
 
 void rdcHand(char (*hand)[3], char (*reduced)[3]) {
@@ -99,15 +93,14 @@ void rdcHand(char (*hand)[3], char (*reduced)[3]) {
 }
 
 void startGame(const int N_CHILD) {
-    int pid, i, j;
+    int pid, i, j, loop = 1;
     int toParent[N_CHILD][2];
     int toChild[N_CHILD][2];
     char cmdBuf[SMALL_BUF];
     int nCard = (N_CHILD < 5) ? 7 : 5;
     pid_t shut_down[N_CHILD];
     char hand[52][3] = {0}, reduced[52][3] = {0};
-    int handSize = 0, loop = 1;
-    
+
     // Create pipe
     for(i = 0; i < N_CHILD; i++) {
         if(pipe(toParent[i]) < 0 || pipe(toChild[i]) < 0) {
@@ -133,7 +126,7 @@ void startGame(const int N_CHILD) {
                 }
             }
 
-            initHand(i+1, toChild[i], nCard, hand, &handSize); // Get initial card
+            initHand(i+1, toChild[i], nCard, hand); // Get initial card
             rdcHand(hand, reduced);
 
             while(loop) {
