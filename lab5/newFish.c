@@ -11,13 +11,6 @@
 pid_t getpid(void);
 int seed;
 
-struct Card {
-    char code[3];
-    int rank;
-    int suit;
-    struct Card *next;
-};
-
 void initrand(int myid) {
     seed = myid - 1;
 }
@@ -45,54 +38,63 @@ void readDeck(char (*deck)[3]) {
     }
 }
 
-void insertToHand(struct Card **head, char buf[]) {
-    struct Card *newCard = (struct Card *)malloc(sizeof(struct Card));
-
-    strcpy(newCard->code, buf);
-    switch (buf[0]) {
-        case 'd': case 'D': newCard->suit = 0; break;
-        case 'c': case 'C': newCard->suit = 1; break;
-        case 'h': case 'H': newCard->suit = 2; break;
-        case 's': case 'S': newCard->suit = 3; break;
+int suitRank(char c) {
+    int r;
+    switch (c) {
+        case 'd': case 'D': r = 0; break;
+        case 'c': case 'C': r = 1; break;
+        case 'h': case 'H': r = 2; break;
+        case 's': case 'S': r = 3; break;
         default:            break;
     }
-    switch (buf[1]) {
-        case '0':           exit(EXIT_SUCCESS);
-        case '2':           newCard->rank = 0; break;
-        case '3':           newCard->rank = 1; break;
-        case '4':           newCard->rank = 2; break;
-        case '5':           newCard->rank = 3; break;
-        case '6':           newCard->rank = 4; break;
-        case '7':           newCard->rank = 5; break;
-        case '8':           newCard->rank = 6; break;
-        case '9':           newCard->rank = 7; break;
-        case 't': case 'T': newCard->rank = 8; break;
-        case 'j': case 'J': newCard->rank = 9; break;
-        case 'q': case 'Q': newCard->rank = 10; break;
-        case 'k': case 'K': newCard->rank = 11; break;
-        case 'a': case 'A': newCard->rank = 12; break;
-        default:            break;
-    }
-    // TODO: insert with comparison
-    
-
-    newCard->next = *head;
-    *head = newCard;
+    return r;
 }
 
-void initHand(int id, int *child, struct Card *head, int num) {
+int cardRank(char c) {
+    int r;
+    switch (c) {
+        case '2':           r = 0; break;
+        case '3':           r = 1; break;
+        case '4':           r = 2; break;
+        case '5':           r = 3; break;
+        case '6':           r = 4; break;
+        case '7':           r = 5; break;
+        case '8':           r = 6; break;
+        case '9':           r = 7; break;
+        case 't': case 'T': r = 8; break;
+        case 'j': case 'J': r = 9; break;
+        case 'q': case 'Q': r = 10; break;
+        case 'k': case 'K': r = 11; break;
+        case 'a': case 'A': r = 12; break;
+        default:            break;
+    }
+    return r;
+}
+
+void insertToHand(char (*hand)[3], char buf[], int *handSize) {
+    int i, suit = suitRank(buf[0]), rank = cardRank(buf[1]);
+    printf("[%d]",*handSize);
+
+    for(i = *handSize-1; (i >= 0) && cardRank(*hand[i]) > rank; i--) {
+        strcpy(hand[i+1], hand[i]);
+    }
+    strcpy(hand[i+1], buf);
+    (*handSize)++;
+}
+
+void initHand(int id, int *child, int num, char (*hand)[3], int *handSize) {
     int i;
     char buf[SMALL_BUF];
 
     for(i = 0; i < num; i++) {
         read(child[0], buf, SMALL_BUF);
-        insertToHand(&head, buf);
+        insertToHand(hand, buf, handSize);
     }
     // sprintf for hands
-    printf("Child %d, pid %d: initial hand <%s> \n", id, getpid(), head->code);
+    printf("Child %d, pid %d: initial hand <%s> \n", id, getpid(), hand[1]);
 }
 
-void rdcHand(struct Card **hand, struct Card **reduced) {
+void rdcHand(char (*hand)[3], char (*reduced)[3]) {
 
 }
 
@@ -101,8 +103,10 @@ void startGame(const int N_CHILD) {
     int toParent[N_CHILD][2];
     int toChild[N_CHILD][2];
     char cmdBuf[SMALL_BUF];
-    pid_t shut_down[N_CHILD];
     int nCard = (N_CHILD < 5) ? 7 : 5;
+    pid_t shut_down[N_CHILD];
+    char hand[52][3] = {0}, reduced[52][3] = {0};
+    int handSize = 0, loop = 1;
     
     // Create pipe
     for(i = 0; i < N_CHILD; i++) {
@@ -119,9 +123,7 @@ void startGame(const int N_CHILD) {
             exit(1);
         } 
         else if (pid == 0) { /* child */
-            struct Card *hand = NULL;
-            struct Card *reduced = NULL;
-            // Close other unrelated pipe
+            // usable pipe-> read: toChild[i][0] write: toParent[i][1]
             for(j = 0; j < N_CHILD; j++){
                 close(toChild[j][1]);
                 close(toParent[j][0]);
@@ -130,23 +132,22 @@ void startGame(const int N_CHILD) {
                     close(toParent[j][1]);
                 }
             }
-            // usable pipe-> read: toChild[i][0] write: toParent[i][1]
 
-            initHand(i+1, toChild[i], hand, nCard); // Get initial card
-            rdcHand(&hand, &reduced);
-            // Main functions -- need while loop here
+            initHand(i+1, toChild[i], nCard, hand, &handSize); // Get initial card
+            rdcHand(hand, reduced);
 
-            // TODO: checkReduce (3 situations, no need to write a function)
-            // 1. initial reduce
-            // 2. got card from another player then reduce
-            // 3. gofish reduce
-            //
-            // TODO: Ask card function (Go fish)
-            // Check if deck is empty
-            // TODO: check hand is empty, which stops the child process
-            // First one with most pair wins
+            while(loop) {
+                // Main functions -- need while loop here
+                // TODO: Ask card function (Go fish)
+                // checkReduce after getting card
+                // Check if deck is empty
+                // TODO: check hand is empty, which stops the child process
+                // First one with most pair wins
+                loop = 0;
+            }
+            
 
-            printf("Child %d, pid %d: fin\n", i+1, getpid());
+            // printf("Child %d, pid %d: fin\n", i+1, getpid());
 
             // Finish child process
             close(toChild[i][0]);
@@ -159,7 +160,6 @@ void startGame(const int N_CHILD) {
     }
 
     if(pid > 0) { /* parent */
-        int loop = 1;
         char deck[52][3];
 
         // close useless pipe
