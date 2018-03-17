@@ -7,17 +7,17 @@
 typedef enum { false, true } bool;
 
 /* control the number of travel agents - easy to change for test runs*/
-const int NUMBER_OF_CHILDREN = 6;
+const int NUMBER_OF_CHILDREN = 4;
 
 /*the program uses seats_left to know when the flight is totally booked and time to shut down.
 The algorithm for this requires seats_left = ( 2 - number of children) to know it has completed*/
-const int PARENT_CONTROL = -4 ;
+int PARENT_CONTROL = -2 ;
 
 /* Required as a paramater for sending ints down a pipe */
 const int SIZE_OF_INT = sizeof(int);
 
 /* easy to change number of seats for different test runs */
-const int INITIAL_NUMBER_OF_SEATS = 1000;
+const int INITIAL_NUMBER_OF_SEATS = 10;
 
 void travel_agent(int *child_to_parent, int *parent_to_child, int id);
 
@@ -98,8 +98,8 @@ int main() {
             read(child_to_parent[0], &seats_left, SIZE_OF_INT);
 
             //if there are seats left, output how many are left
-            // if (seats_left > 0)
-            //     printf("The main just read seats_left: %d\n",seats_left);
+            if (seats_left > 0)
+                printf("The main just read seats_left: %d\n",seats_left);
 
             //when seats_left < PARENT_CONTROL, all children have finished their loops
             if (seats_left < PARENT_CONTROL) {

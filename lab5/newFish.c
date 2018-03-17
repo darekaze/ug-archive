@@ -39,14 +39,18 @@ void readDeck(char (*deck)[3]) {
     }
 }
 
+
+
 void startGame(const int N_CHILD, char (*deck)[3]) {
     int pid, i;
-    int childToParent[2];
-    int parentToChild[2];
+    int toParent[2];
+    int toChild[2];
     char inbuf[BUFFERSIZE];
-
+    pid_t shut_down[N_CHILD];
+    int playerTurn;
+    
     // Create pipe
-    if(pipe(childToParent) < 0 || pipe(parentToChild)) {
+    if(pipe(toParent) < 0 || pipe(toChild)) {
         printf("Pipe creation error\n");
         exit(1);
     }
@@ -59,10 +63,11 @@ void startGame(const int N_CHILD, char (*deck)[3]) {
             exit(1);
         } 
         else if (pid == 0) { /* child */
-            close(parentToChild[1]);
-            close(childToParent[0]);
+            close(toChild[1]);
+            close(toParent[0]);
             // Main functions
             // TODO: Initialize hand to child
+            
             // Reduce function
             // Ask card function (Go fish)
 
@@ -70,35 +75,48 @@ void startGame(const int N_CHILD, char (*deck)[3]) {
             printf("Child %d, pid %d: no task\n", i+1, getpid());
             exit(0);
         }
+        else {
+            shut_down[i] = pid;
+        }
     }
 
     if(pid > 0) { /* parent */
         int loop = 1;
-        close(parentToChild[0]);
-        close(childToParent[1]);
+        close(toChild[0]);
+        close(toParent[1]);
+
+        printf("Parent: the child players are ");
+        for(i = 0; i < N_CHILD; i++){
+            printf("%d ", shut_down[i]);
+        }
+        printf("\n");
 
         while(loop) {
             // Add parent control
-
             // For Debug
             loop = 0;
             printf("Parent exit loop. PID: %d\n", getpid());
         }
-        close(parentToChild[1]);
-        close(childToParent[0]);
+        close(toChild[1]);
+        close(toParent[0]);
     }
 
     /* prevent zombie */
-    int stat;
     for(i = 0; i < N_CHILD; i++)
-        wait(&stat);
+        waitpid(shut_down[i], NULL, 0);
+        
 }
 
 
 int main(int argc, char *argv[]) {
     char deck[52][3];
+    int nChild = atoi(argv[1]);
 
+    if(nChild < 2 || nChild > 8) {
+        printf("Player range should be 2 to 8...\n");
+        return 0;
+    }
     readDeck(deck);
-    startGame(atoi(argv[1]), deck);
+    startGame(nChild, deck);
     return 0;
 }
