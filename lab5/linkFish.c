@@ -46,7 +46,7 @@ void readDeck(char (*deck)[3]) {
 }
 
 void insertToHand(struct Card **head, char buf[]) {
-    struct Card *newCard = (struct Card *)malloc(sizeof(struct Card));
+    struct Card *curr, *newCard = (struct Card *)malloc(sizeof(struct Card));
 
     strcpy(newCard->code, buf);
     switch (buf[0]) {
@@ -73,11 +73,27 @@ void insertToHand(struct Card **head, char buf[]) {
         case 'a': case 'A': newCard->rank = 12; break;
         default:            break;
     }
-    // TODO: insert with comparison
-    
+    newCard->next = NULL;
+    if(*head == NULL || (*head)->rank < newCard->rank ||
+      ((*head)->rank == newCard->rank && (*head)->suit < newCard->rank)) {
+        newCard->next = *head;
+        *head = newCard;
+    }
+    else {
+        // Still have some issue (suit not sorted correctly)
+        curr = *head;
+        while(curr->next != NULL && curr->next->rank >= newCard->rank) {
+            curr = curr->next;
+        }
+        while(curr->next != NULL &&
+          (curr->next->rank == newCard->rank && curr->next->suit < newCard->suit)) {
+            curr = curr->next;
+        }
+        newCard->next = curr->next;
+        curr->next = newCard;
+    }
 
-    newCard->next = *head;
-    *head = newCard;
+    
 }
 
 void initHand(int id, int *child, struct Card *head, int num) {
