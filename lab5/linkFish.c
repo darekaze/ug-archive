@@ -82,11 +82,11 @@ void insertToHand(struct Card **head, char buf[]) {
     else {
         // Still have some issue (suit not sorted correctly)
         curr = *head;
-        while(curr->next != NULL && curr->next->rank >= newCard->rank) {
+        while(curr->next != NULL && curr->next->rank > newCard->rank) {
             curr = curr->next;
         }
         while(curr->next != NULL &&
-          (curr->next->rank == newCard->rank && curr->next->suit < newCard->suit)) {
+          (curr->next->rank == newCard->rank && curr->next->suit > newCard->suit)) {
             curr = curr->next;
         }
         newCard->next = curr->next;
@@ -96,37 +96,63 @@ void insertToHand(struct Card **head, char buf[]) {
     
 }
 
-void initHand(int id, int *child, struct Card *head, int num) {
+void initHand(int *child, struct Card **head, int num) {
     int i;
     char buf[SMALL_BUF];
-    struct Card *temp;
 
     for(i = 0; i < num; i++) {
         read(child[0], buf, SMALL_BUF);
-        insertToHand(&head, buf);
+        insertToHand(head, buf);
     }
-    // sprintf for hands
-    temp = head;
-    while(temp != NULL) {
-        printf("%s->", temp->code);
-        temp = temp->next;
-    }
-    printf("Child %d, pid %d: initial hand <%s> \n", id, getpid(), head->code);
 }
 
 void rdcHand(struct Card **hand, struct Card **reduced) {
+    struct Card *curr, *prev, *pair, *temp;
 
+    prev = *hand;
+    curr = prev->next;
+    while(curr != NULL) {
+        if(curr->next != NULL && curr->rank == curr->next->rank) {
+            pair = curr;
+            curr = curr->next->next;
+            pair->next->next = NULL;
+            if(*reduced == NULL) {
+                *reduced = pair;
+            } else {
+                temp = *reduced;
+                while(temp->next != NULL)
+                    temp = temp->next;
+                temp->next = pair;
+            }
+            prev->next = curr;
+        } else {
+            prev = curr;
+            curr = curr->next;
+        }
+    }
+}
+
+void printHand(int id, struct Card *hand, char *str) {
+    // sprintf for hands
+    struct Card *temp;
+    char cards[BIG_BUF] = "";
+
+    temp = hand;
+    while(temp != NULL) {
+        (temp == hand) ? sprintf(cards,"%s", temp->code) :
+        sprintf(cards, "%s %s", cards, temp->code);
+        temp = temp->next;
+    }
+    printf("Child %d, pid %d: %s hand <%s> \n", id, getpid(), str, cards);
 }
 
 void startGame(const int N_CHILD) {
-    int pid, i, j;
     int toParent[N_CHILD][2];
     int toChild[N_CHILD][2];
-    char cmdBuf[SMALL_BUF];
     pid_t shut_down[N_CHILD];
+    char cmdBuf[BIG_BUF];
+    int pid, i, j, loop = 1;
     int nCard = (N_CHILD < 5) ? 7 : 5;
-    struct Card *hand = NULL;
-    struct Card *reduced = NULL;
     
     // Create pipe
     for(i = 0; i < N_CHILD; i++) {
@@ -143,7 +169,10 @@ void startGame(const int N_CHILD) {
             exit(1);
         } 
         else if (pid == 0) { /* child */
-            // Close other unrelated pipe
+            struct Card *hand = NULL;
+            struct Card *reduced = NULL;
+
+            // usable pipe-> read: toChild[i][0] write: toParent[i][1]
             for(j = 0; j < N_CHILD; j++){
                 close(toChild[j][1]);
                 close(toParent[j][0]);
@@ -152,23 +181,28 @@ void startGame(const int N_CHILD) {
                     close(toParent[j][1]);
                 }
             }
-            // usable pipe-> read: toChild[i][0] write: toParent[i][1]
 
-            initHand(i+1, toChild[i], hand, nCard); // Get initial card
+            initHand(toChild[i], &hand, nCard); // Get initial card
+            printHand(i+1, hand, "initial");
             rdcHand(&hand, &reduced);
-            // Main functions -- need while loop here
+            printHand(i+1, hand, "reduced");
 
-            // TODO: checkReduce (3 situations, no need to write a function)
-            // 1. initial reduce
-            // 2. got card from another player then reduce
-            // 3. gofish reduce
-            //
-            // TODO: Ask card function (Go fish)
-            // Check if deck is empty
-            // TODO: check hand is empty, which stops the child process
-            // First one with most pair wins
+            while(loop) {
+                // Main functions -- need while loop here
 
-            printf("Child %d, pid %d: fin\n", i+1, getpid());
+                // TODO: checkReduce (3 situations, no need to write a function)
+                // 1. initial reduce
+                // 2. got card from another player then reduce
+                // 3. gofish reduce
+                //
+                // TODO: Ask card function (Go fish)
+                // Check if deck is empty
+                // TODO: check hand is empty, which stops the child process
+                // First one with most pair wins
+                loop = 0;
+            }
+
+            // printf("Child %d, pid %d: fin\n", i+1, getpid());
 
             // Finish child process
             close(toChild[i][0]);
@@ -184,7 +218,7 @@ void startGame(const int N_CHILD) {
         int loop = 1, k = 0;
         char deck[52][3];
 
-        // close useless pipe
+        // usable pipe-> read: toParent[i][0] write: toChild[i][1]
         for(i = 0; i < N_CHILD; i++) {
             close(toChild[i][0]);
             close(toParent[i][1]);
@@ -194,22 +228,19 @@ void startGame(const int N_CHILD) {
         for(i = 0; i < N_CHILD; i++)
             printf("%d ", shut_down[i]);
         printf("\n");
-
-        // usable pipe-> read: toParent[i][0] write: toChild[i][1]
         readDeck(deck);
+
         // Initialize player hand
         for(i = 0; i < nCard; i++)
             for(j = 0; j < N_CHILD; j++)
                 write(toChild[j][1], deck[k++], SMALL_BUF);
-            
-                
 
         // Game loop
         while(loop) {
             // TODO: Add parent control
             // For Debug
             loop = 0;
-            printf("Parent exit loop. PID: %d\n", getpid());
+            // printf("Parent exit loop. PID: %d\n", getpid());
         }
 
         // Close all pipe at the end
@@ -232,7 +263,6 @@ int main(int argc, char *argv[]) {
         printf("Player range should be 2 to 8...\n");
         return 0;
     }
-     // should be done in parent
     startGame(nChild);
     return 0;
 }
