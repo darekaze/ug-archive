@@ -385,12 +385,11 @@ void startGame(const int N_CHILD) {
     }
 
     if(pid > 0) { /* parent */
-        int k = 0, turn = 0, loop = 18;
-        int num = N_CHILD, tgt;
+        int k = 0, turn = 0, loop = 159;
         char deck[52][3];
         int fPlayer[N_CHILD], tPlayer[N_CHILD];
         char avab[10] = "", cmdBuf[BIG_BUF] = "";
-        int record[N_CHILD];
+        int record[N_CHILD], tgt;
 
         // usable pipe-> read: toParent[i][0] write: toChild[i][1]
         for(i = 0; i < N_CHILD; i++) {
@@ -445,11 +444,15 @@ void startGame(const int N_CHILD) {
             }
             printf("p->%s\n", avab);
 
+            if(++turn >= N_CHILD) turn = 0;
+            while(avab[turn+1] == 'x') {
+                turn++;
+                if(turn >= N_CHILD)
+                    turn = 0;
+            }
 
             // TODO: add end loop condition
-            if(++turn >= num) {
-                turn = 0;
-            }
+            
             loop = loop - 1;
             // printf("Parent exit loop. PID: %d\n", getpid());
 
