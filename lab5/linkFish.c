@@ -146,7 +146,7 @@ void printHand(int id, struct Card *hand, char *str) {
     printf("Child %d, pid %d: %s <%s> \n", id, getpid(), str, cards);
 }
 
-void requesting(char *cmd, int id, struct Card *head, int pnt) {
+void makeRequest(char (*cmd), int id, struct Card *head, int pnt) {
     int tgt, i, j, num = 0;
     char wanted;
     struct Card *temp;
@@ -154,7 +154,8 @@ void requesting(char *cmd, int id, struct Card *head, int pnt) {
     int ww = nextrand();
 
     printHand(id+1, head, "my hand");
-    (++cmd)[id] = 'x'; // exclude itself
+    memmove(cmd, cmd+1, strlen(cmd));
+    cmd[id] = 'x'; // exclude itself
 
     for(i = 0; i < strlen(cmd); i++)
         if(cmd[i] == 'p') num++;
@@ -178,10 +179,41 @@ void requesting(char *cmd, int id, struct Card *head, int pnt) {
     }
     wanted = temp->code[1];
 
-    sprintf(cmd, "%d%c", tgt, wanted);
+    sprintf(cmd, "%c%d%c", 'h', tgt, wanted);
     printf("Child %d, pid %d: random number %d %d, asking child %d for rank %c\n",
-             id, getpid(), tt, ww, tgt+1, wanted);
+             id+1, getpid(), tt, ww, tgt+1, wanted);
     write(pnt, cmd, BIG_BUF);
+}
+
+void handleRequest(int id, char c, struct Card **head, int pnt) {
+    struct Card *temp;
+    char res[SMALL_BUF] = "";
+
+    temp = *head;
+    if(temp->code[1] == c) {
+        strcpy(res, temp->code);
+        *head = temp->next;
+    }
+    else {
+        while(temp->next != NULL) {
+            if(temp->next->code[1] == c) {
+                strcpy(res, temp->next->code);
+                temp->next = temp->next->next;
+                break;
+            }
+            temp = temp->next;
+        }
+    }
+    // TODO: Check if deck is empty
+    if(strcmp(res, "") != 0) {
+        printHand(id, *head, "new hand");
+        sprintf(res, "%c%s", 'y', res);
+    }
+    else {
+        printf("Child %d, pid %d: go fish\n", id+1, getpid());
+        strcpy(res, "n");
+    }
+    write(pnt, res, BIG_BUF);
 }
 
 
@@ -228,18 +260,18 @@ void startGame(const int N_CHILD) {
             rdcHand(&hand, &reduced);
             printHand(i+1, hand, "reduced hand");
 
+            // while(hand != NULL)
             while(loop) {
                 read(toChild[i][0], cmdBuf, BIG_BUF);
-                // 
-                printf("%d..%s\n",i+1, cmdBuf);
+                printf("%d..%s\n", i+1, cmdBuf);
                 switch(cmdBuf[0]) {
-                    case 't':
-                        requesting(cmdBuf, i, hand, toParent[i][1]);
-                        
-                        loop = 0; // Debug
-                        // TODO: Ask card function (Go fish)
-                        // Check if deck is empty
-
+                    case 'm':
+                        makeRequest(cmdBuf, i, hand, toParent[i][1]);
+                        break;
+                    case 'h':
+                        printf("This is child %d\n", i+1);
+                        handleRequest(i+1, cmdBuf[2], &hand, toParent[i][1]);
+                        loop = 0;
                         break;
                     default:
                         printf("Unknown command\n");
@@ -270,7 +302,7 @@ void startGame(const int N_CHILD) {
     }
 
     if(pid > 0) { /* parent */
-        int k = 0, num = N_CHILD, turn = 0;
+        int k = 0, num = N_CHILD, turn = 0, tgt;
         char deck[52][3];
         int fPlayer[N_CHILD];
         int tPlayer[N_CHILD];
@@ -289,7 +321,7 @@ void startGame(const int N_CHILD) {
         readDeck(deck);
 
         // Available player string
-        avab[0] = 't';
+        avab[0] = 'm';
         for(i = 1; i <= N_CHILD; i++) {
             avab[i] = 'p';
         }
@@ -303,12 +335,15 @@ void startGame(const int N_CHILD) {
         // while(loop) {
 
             // TODO: Add parent control
-            // parent needs to know the players on table
-            // For Debug
-            // TODO: make avaliable player string (except the child itself)
             write(toChild[turn][1], avab, BIG_BUF); // need to send the player list
             read(toParent[turn][0], cmdBuf, BIG_BUF); // read the player request then pass it to the child
-            write(toChild[2][1], cmdBuf, BIG_BUF); // need to send the player list
+
+            printf("p---%s\n", cmdBuf);
+            tgt = (int) cmdBuf[1];
+            write(toChild[1][1], cmdBuf, BIG_BUF);
+            read(toParent[1][0], cmdBuf, BIG_BUF);
+            printf("%c", cmdBuf[1]);
+            
             // if(++turn >= num) {
             //     turn = 0;
             // }
