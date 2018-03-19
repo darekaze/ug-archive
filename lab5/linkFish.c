@@ -106,8 +106,9 @@ void initHand(int *child, struct Card **head, int num) {
     }
 }
 
-void rdcHand(struct Card **hand, struct Card **reduced) {
+int rdcHand(struct Card **hand, struct Card **reduced) {
     struct Card *curr, *prev, *pair, *temp;
+    int isChange = 0;
 
     prev = *hand;
     curr = prev->next;
@@ -125,15 +126,16 @@ void rdcHand(struct Card **hand, struct Card **reduced) {
                 temp->next = pair;
             }
             prev->next = curr;
+            isChange = 1;
         } else {
             prev = curr;
             curr = curr->next;
         }
     }
+    return isChange;
 }
 
 void printHand(int id, struct Card *hand, char *str) {
-    // sprintf for hands
     struct Card *temp;
     char cards[BIG_BUF] = "";
 
@@ -146,7 +148,7 @@ void printHand(int id, struct Card *hand, char *str) {
     printf("Child %d, pid %d: %s <%s> \n", id, getpid(), str, cards);
 }
 
-void makeRequest(char (*cmd), int id, struct Card *head, int pnt) {
+void makeRequest(int id, char (*cmd), struct Card *head, int pnt) {
     int tgt, i, j, num = 0;
     char wanted;
     struct Card *temp;
@@ -206,14 +208,28 @@ void handleRequest(int id, char c, struct Card **head, int pnt) {
     }
     // TODO: Check if deck is empty
     if(strcmp(res, "") != 0) {
-        printHand(id, *head, "new hand");
-        sprintf(res, "%c%s", 'y', res);
+        printHand(id+1, *head, "new hand");
+        sprintf(res, "%c%c%s", 'y', 'y', res);
     }
     else {
-        printf("Child %d, pid %d: go fish\n", id, getpid());
-        strcpy(res, "n");
+        printf("Child %d, pid %d: go fish\n", id+1, getpid());
+        strcpy(res, "ny");
     }
     write(pnt, res, BIG_BUF);
+}
+
+void handleResult(int id, char (*cmd), struct Card **hand, struct Card **reduced, int pnt) {
+    memmove(cmd, cmd+2, strlen(cmd));
+    insertToHand(hand, cmd);
+    printHand(id+1, *hand, "new hand");
+    if(rdcHand(hand, reduced))
+        printHand(id+1, *hand, "reduced hand");
+    if(*hand == NULL){
+        strcpy(cmd,"y");
+    }
+    write(pnt, cmd, BIG_BUF);
+    // TODO: check hand is empty, which stops the child process
+    // First one with most pair wins
 }
 
 
@@ -221,7 +237,7 @@ void startGame(const int N_CHILD) {
     int toParent[N_CHILD][2];
     int toChild[N_CHILD][2];
     pid_t shut_down[N_CHILD];
-    int pid, i, j, loop = 1;
+    int pid, i, j;
     int nCard = (N_CHILD < 5) ? 7 : 5;
     
     // Create pipe
@@ -241,6 +257,7 @@ void startGame(const int N_CHILD) {
         else if (pid == 0) { /* child */
             struct Card *hand = NULL;
             struct Card *reduced = NULL;
+            int loop = 1;
             
 
             // usable pipe-> read: toChild[i][0] write: toParent[i][1]
@@ -256,8 +273,8 @@ void startGame(const int N_CHILD) {
             initrand(i+1);
             initHand(toChild[i], &hand, nCard); // Get initial card
             printHand(i+1, hand, "initial hand");
-            rdcHand(&hand, &reduced);
-            printHand(i+1, hand, "reduced hand");
+            if(rdcHand(&hand, &reduced))
+                printHand(i+1, hand, "reduced hand");
 
             // while(hand != NULL)
             while(loop) {
@@ -266,16 +283,13 @@ void startGame(const int N_CHILD) {
                 // printf("%d..%s\n", i+1, cmdBuf);
                 switch(cmdBuf[0]) {
                     case 'm':
-                        makeRequest(cmdBuf, i, hand, toParent[i][1]);
+                        makeRequest(i, cmdBuf, hand, toParent[i][1]);
                         break;
                     case 'h':
-                        handleRequest(i+1, cmdBuf[2], &hand, toParent[i][1]);
+                        handleRequest(i, cmdBuf[2], &hand, toParent[i][1]);
                         break;
-                    case 'y':
-                        handlePair(); // add card to hand then reduce
-                        break;
-                    case 'n':
-                        handleFish(); // go fish
+                    case 'y': case 'n':
+                        handleResult(i, cmdBuf, &hand, &reduced, toParent[i][1]); // add card to hand then reduce
                         break;
                     default:
                         printf("Unknown command\n");
@@ -283,13 +297,6 @@ void startGame(const int N_CHILD) {
                         break;
                 }
                 // Main functions -- need while loop here
-
-                // TODO: checkReduce 
-                // 1. got card from another player then reduce
-                // 2. gofish reduce
-                
-                // TODO: check hand is empty, which stops the child process
-                // First one with most pair wins
                 
             }
 
@@ -306,7 +313,8 @@ void startGame(const int N_CHILD) {
     }
 
     if(pid > 0) { /* parent */
-        int k = 0, num = N_CHILD, turn = 0, tgt;
+        int k = 0, turn = 0, loop = 1;
+        int num = N_CHILD, tgt;
         char deck[52][3];
         int fPlayer[N_CHILD];
         int tPlayer[N_CHILD];
@@ -339,15 +347,29 @@ void startGame(const int N_CHILD) {
         i = 0;
         // while(loop) {
 
-            write(toChild[turn][1], avab, BIG_BUF); // need to send the player list
-            read(toParent[turn][0], cmdBuf, BIG_BUF); // read the player request then pass it to the child
+            // start turn
+            write(toChild[turn][1], avab, BIG_BUF);
+            read(toParent[turn][0], cmdBuf, BIG_BUF);
 
+            // handle request
             tgt = (int)cmdBuf[1] - '0';
             write(toChild[tgt][1], cmdBuf, BIG_BUF);
             read(toParent[tgt][0], cmdBuf, BIG_BUF);
 
+            // handle result (include player status and result)
+            if(cmdBuf[0] == 'n') {
+                // give card
+                sprintf(cmdBuf,"%s%s", cmdBuf, deck[k++]);
+            } else if(cmdBuf[1] == 'n') {
+                // TODO: read the winning result (reduced card deck)
+            }
+            printf("p--%s\n", cmdBuf);
+            write(toChild[turn][1], cmdBuf, BIG_BUF);
+            read(toParent[turn][0], cmdBuf, BIG_BUF);
 
-            printf("%c", cmdBuf[1]);
+            // win?
+
+            // printf("%c", cmdBuf[1]);
             
             // if(++turn >= num) {
             //     turn = 0;
