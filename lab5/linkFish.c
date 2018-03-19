@@ -158,11 +158,10 @@ void makeRequest(int id, char (*cmd), struct Card *head, int pnt) {
     printHand(id+1, head, "my hand");
     memmove(cmd, cmd+1, strlen(cmd));
     cmd[id] = 'x'; // exclude itself
+    // printf("%d+++%s\n", id+1,cmd);
 
-    for(i = 0; i < strlen(cmd); i++)
-        if(cmd[i] == 'p') num++;
-    i = id, j = tt % num, num = 0;
-    while(num < j){
+    i = 0, num = 0;
+    while(num < tt){
         if(cmd[i] == 'p') {
             tgt = i;
             num++;
@@ -208,8 +207,11 @@ void handleRequest(int id, char c, struct Card **head, int pnt) {
     }
     // TODO: Check if deck is empty
     if(strcmp(res, "") != 0) {
+        char *tmp = strdup(res);
         printHand(id+1, *head, "new hand");
-        sprintf(res, "%c%c%s", 'y', 'y', res);
+        strcpy(res,"yy");
+        strcat(res, tmp);
+        free(tmp);
     }
     else {
         printf("Child %d, pid %d: go fish\n", id+1, getpid());
@@ -220,10 +222,12 @@ void handleRequest(int id, char c, struct Card **head, int pnt) {
 
 void handleResult(int id, char (*cmd), struct Card **hand, struct Card **reduced, int pnt) {
     memmove(cmd, cmd+2, strlen(cmd));
-    insertToHand(hand, cmd);
-    printHand(id+1, *hand, "new hand");
-    if(rdcHand(hand, reduced))
-        printHand(id+1, *hand, "reduced hand");
+    if(strcmp(cmd, "") != 0){
+        insertToHand(hand, cmd);
+        printHand(id+1, *hand, "new hand");
+        if(rdcHand(hand, reduced))
+            printHand(id+1, *hand, "reduced hand");
+    }
     if(*hand == NULL){
         strcpy(cmd,"y");
     }
@@ -234,11 +238,9 @@ void handleResult(int id, char (*cmd), struct Card **hand, struct Card **reduced
 
 
 void startGame(const int N_CHILD) {
-    int toParent[N_CHILD][2];
-    int toChild[N_CHILD][2];
+    int toParent[N_CHILD][2], toChild[N_CHILD][2];
     pid_t shut_down[N_CHILD];
-    int pid, i, j;
-    int nCard = (N_CHILD < 5) ? 7 : 5;
+    int pid, i, j, nCard = (N_CHILD < 5) ? 7 : 5;
     
     // Create pipe
     for(i = 0; i < N_CHILD; i++) {
@@ -258,7 +260,6 @@ void startGame(const int N_CHILD) {
             struct Card *hand = NULL;
             struct Card *reduced = NULL;
             int loop = 1;
-            
 
             // usable pipe-> read: toChild[i][0] write: toParent[i][1]
             for(j = 0; j < N_CHILD; j++){
@@ -289,7 +290,7 @@ void startGame(const int N_CHILD) {
                         handleRequest(i, cmdBuf[2], &hand, toParent[i][1]);
                         break;
                     case 'y': case 'n':
-                        handleResult(i, cmdBuf, &hand, &reduced, toParent[i][1]); // add card to hand then reduce
+                        handleResult(i, cmdBuf, &hand, &reduced, toParent[i][1]);
                         break;
                     default:
                         printf("Unknown command\n");
@@ -313,13 +314,11 @@ void startGame(const int N_CHILD) {
     }
 
     if(pid > 0) { /* parent */
-        int k = 0, turn = 0, loop = 1;
+        int k = 0, turn = 0, loop = 18;
         int num = N_CHILD, tgt;
         char deck[52][3];
-        int fPlayer[N_CHILD];
-        int tPlayer[N_CHILD];
-        char avab[N_CHILD+1];
-        char cmdBuf[BIG_BUF] = "";
+        int fPlayer[N_CHILD], tPlayer[N_CHILD];
+        char avab[N_CHILD+1], cmdBuf[BIG_BUF] = "";
 
         // usable pipe-> read: toParent[i][0] write: toChild[i][1]
         for(i = 0; i < N_CHILD; i++) {
@@ -343,10 +342,9 @@ void startGame(const int N_CHILD) {
             for(j = 0; j < N_CHILD; j++)
                 write(toChild[j][1], deck[k++], SMALL_BUF);
 
-        // Player cycle
+        // Play cycle
         i = 0;
-        // while(loop) {
-
+        while(loop) {
             // start turn
             write(toChild[turn][1], avab, BIG_BUF);
             read(toParent[turn][0], cmdBuf, BIG_BUF);
@@ -357,13 +355,12 @@ void startGame(const int N_CHILD) {
             read(toParent[tgt][0], cmdBuf, BIG_BUF);
 
             // handle result (include player status and result)
-            if(cmdBuf[0] == 'n') {
-                // give card
+            if(cmdBuf[0] == 'n' && k <= 52) {
                 sprintf(cmdBuf,"%s%s", cmdBuf, deck[k++]);
             } else if(cmdBuf[1] == 'n') {
                 // TODO: read the winning result (reduced card deck)
             }
-            printf("p--%s\n", cmdBuf);
+            // printf("p--%s\n", cmdBuf);
             write(toChild[turn][1], cmdBuf, BIG_BUF);
             read(toParent[turn][0], cmdBuf, BIG_BUF);
 
@@ -371,13 +368,13 @@ void startGame(const int N_CHILD) {
 
             // printf("%c", cmdBuf[1]);
             
-            // if(++turn >= num) {
-            //     turn = 0;
-            // }
-            loop = 0;
+            if(++turn >= num) {
+                turn = 0;
+            }
+            loop = loop - 1;
             // printf("Parent exit loop. PID: %d\n", getpid());
 
-        // }
+        }
 
         // Close all pipe at the end
         for(j = 0; j < N_CHILD; j++) {
