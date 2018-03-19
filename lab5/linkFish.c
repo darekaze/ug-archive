@@ -210,7 +210,7 @@ void handleRequest(int id, char c, struct Card **head, int pnt) {
         sprintf(res, "%c%s", 'y', res);
     }
     else {
-        printf("Child %d, pid %d: go fish\n", id+1, getpid());
+        printf("Child %d, pid %d: go fish\n", id, getpid());
         strcpy(res, "n");
     }
     write(pnt, res, BIG_BUF);
@@ -221,7 +221,6 @@ void startGame(const int N_CHILD) {
     int toParent[N_CHILD][2];
     int toChild[N_CHILD][2];
     pid_t shut_down[N_CHILD];
-    char cmdBuf[BIG_BUF] = "";
     int pid, i, j, loop = 1;
     int nCard = (N_CHILD < 5) ? 7 : 5;
     
@@ -262,16 +261,21 @@ void startGame(const int N_CHILD) {
 
             // while(hand != NULL)
             while(loop) {
+                char cmdBuf[BIG_BUF] = "";
                 read(toChild[i][0], cmdBuf, BIG_BUF);
-                printf("%d..%s\n", i+1, cmdBuf);
+                // printf("%d..%s\n", i+1, cmdBuf);
                 switch(cmdBuf[0]) {
                     case 'm':
                         makeRequest(cmdBuf, i, hand, toParent[i][1]);
                         break;
                     case 'h':
-                        printf("This is child %d\n", i+1);
                         handleRequest(i+1, cmdBuf[2], &hand, toParent[i][1]);
-                        loop = 0;
+                        break;
+                    case 'y':
+                        handlePair(); // add card to hand then reduce
+                        break;
+                    case 'n':
+                        handleFish(); // go fish
                         break;
                     default:
                         printf("Unknown command\n");
@@ -307,6 +311,7 @@ void startGame(const int N_CHILD) {
         int fPlayer[N_CHILD];
         int tPlayer[N_CHILD];
         char avab[N_CHILD+1];
+        char cmdBuf[BIG_BUF] = "";
 
         // usable pipe-> read: toParent[i][0] write: toChild[i][1]
         for(i = 0; i < N_CHILD; i++) {
@@ -334,14 +339,14 @@ void startGame(const int N_CHILD) {
         i = 0;
         // while(loop) {
 
-            // TODO: Add parent control
             write(toChild[turn][1], avab, BIG_BUF); // need to send the player list
             read(toParent[turn][0], cmdBuf, BIG_BUF); // read the player request then pass it to the child
 
-            printf("p---%s\n", cmdBuf);
-            tgt = (int) cmdBuf[1];
-            write(toChild[1][1], cmdBuf, BIG_BUF);
-            read(toParent[1][0], cmdBuf, BIG_BUF);
+            tgt = (int)cmdBuf[1] - '0';
+            write(toChild[tgt][1], cmdBuf, BIG_BUF);
+            read(toParent[tgt][0], cmdBuf, BIG_BUF);
+
+
             printf("%c", cmdBuf[1]);
             
             // if(++turn >= num) {
