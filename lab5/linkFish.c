@@ -143,14 +143,53 @@ void printHand(int id, struct Card *hand, char *str) {
         sprintf(cards, "%s %s", cards, temp->code);
         temp = temp->next;
     }
-    printf("Child %d, pid %d: %s hand <%s> \n", id, getpid(), str, cards);
+    printf("Child %d, pid %d: %s <%s> \n", id, getpid(), str, cards);
 }
+
+void requesting(char *cmd, int id, struct Card *head, int pnt) {
+    int tgt, i, j, num = 0;
+    char wanted;
+    struct Card *temp;
+    int tt = nextrand();
+    int ww = nextrand();
+
+    printHand(id+1, head, "my hand");
+    (++cmd)[id] = 'x'; // exclude itself
+
+    for(i = 0; i < strlen(cmd); i++)
+        if(cmd[i] == 'p') num++;
+    i = id, j = tt % num, num = 0;
+    while(num < j){
+        if(cmd[i] == 'p') {
+            tgt = i;
+            num++;
+        }
+        if(++i >= strlen(cmd)) i = 0;
+    }
+
+    temp = head, num = 0;
+    while(temp != NULL) {
+        temp = temp->next;
+        num++;
+    }
+    num = (ww - 1) % num, temp = head;
+    for(i = 0; i < num; i++) {
+        temp = temp->next;
+    }
+    wanted = temp->code[1];
+
+    sprintf(cmd, "%d%c", tgt, wanted);
+    printf("Child %d, pid %d: random number %d %d, asking child %d for rank %c\n",
+             id, getpid(), tt, ww, tgt+1, wanted);
+    write(pnt, cmd, BIG_BUF);
+}
+
 
 void startGame(const int N_CHILD) {
     int toParent[N_CHILD][2];
     int toChild[N_CHILD][2];
     pid_t shut_down[N_CHILD];
-    char cmdBuf[BIG_BUF];
+    char cmdBuf[BIG_BUF] = "";
     int pid, i, j, loop = 1;
     int nCard = (N_CHILD < 5) ? 7 : 5;
     
@@ -171,6 +210,7 @@ void startGame(const int N_CHILD) {
         else if (pid == 0) { /* child */
             struct Card *hand = NULL;
             struct Card *reduced = NULL;
+            
 
             // usable pipe-> read: toChild[i][0] write: toParent[i][1]
             for(j = 0; j < N_CHILD; j++){
@@ -182,24 +222,39 @@ void startGame(const int N_CHILD) {
                 }
             }
 
+            initrand(i+1);
             initHand(toChild[i], &hand, nCard); // Get initial card
-            printHand(i+1, hand, "initial");
+            printHand(i+1, hand, "initial hand");
             rdcHand(&hand, &reduced);
-            printHand(i+1, hand, "reduced");
+            printHand(i+1, hand, "reduced hand");
 
             while(loop) {
+                read(toChild[i][0], cmdBuf, BIG_BUF);
+                // 
+                printf("%d..%s\n",i+1, cmdBuf);
+                switch(cmdBuf[0]) {
+                    case 't':
+                        requesting(cmdBuf, i, hand, toParent[i][1]);
+                        
+                        loop = 0; // Debug
+                        // TODO: Ask card function (Go fish)
+                        // Check if deck is empty
+
+                        break;
+                    default:
+                        printf("Unknown command\n");
+                        loop = 0;
+                        break;
+                }
                 // Main functions -- need while loop here
 
-                // TODO: checkReduce (3 situations, no need to write a function)
-                // 1. initial reduce
-                // 2. got card from another player then reduce
-                // 3. gofish reduce
-                //
-                // TODO: Ask card function (Go fish)
-                // Check if deck is empty
+                // TODO: checkReduce 
+                // 1. got card from another player then reduce
+                // 2. gofish reduce
+                
                 // TODO: check hand is empty, which stops the child process
                 // First one with most pair wins
-                loop = 0;
+                
             }
 
             // printf("Child %d, pid %d: fin\n", i+1, getpid());
@@ -215,8 +270,11 @@ void startGame(const int N_CHILD) {
     }
 
     if(pid > 0) { /* parent */
-        int loop = 1, k = 0;
+        int k = 0, num = N_CHILD, turn = 0;
         char deck[52][3];
+        int fPlayer[N_CHILD];
+        int tPlayer[N_CHILD];
+        char avab[N_CHILD+1];
 
         // usable pipe-> read: toParent[i][0] write: toChild[i][1]
         for(i = 0; i < N_CHILD; i++) {
@@ -230,18 +288,34 @@ void startGame(const int N_CHILD) {
         printf("\n");
         readDeck(deck);
 
+        // Available player string
+        avab[0] = 't';
+        for(i = 1; i <= N_CHILD; i++) {
+            avab[i] = 'p';
+        }
         // Initialize player hand
         for(i = 0; i < nCard; i++)
             for(j = 0; j < N_CHILD; j++)
                 write(toChild[j][1], deck[k++], SMALL_BUF);
 
-        // Game loop
-        while(loop) {
+        // Player cycle
+        i = 0;
+        // while(loop) {
+
             // TODO: Add parent control
+            // parent needs to know the players on table
             // For Debug
+            // TODO: make avaliable player string (except the child itself)
+            write(toChild[turn][1], avab, BIG_BUF); // need to send the player list
+            read(toParent[turn][0], cmdBuf, BIG_BUF); // read the player request then pass it to the child
+            write(toChild[2][1], cmdBuf, BIG_BUF); // need to send the player list
+            // if(++turn >= num) {
+            //     turn = 0;
+            // }
             loop = 0;
             // printf("Parent exit loop. PID: %d\n", getpid());
-        }
+
+        // }
 
         // Close all pipe at the end
         for(j = 0; j < N_CHILD; j++) {
