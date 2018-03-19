@@ -113,7 +113,22 @@ int rdcHand(struct Card **hand, struct Card **reduced) {
     prev = *hand;
     curr = prev->next;
     while(curr != NULL) {
-        if(curr->next != NULL && curr->rank == curr->next->rank) {
+        if(prev->rank == curr->rank) {
+            pair = prev;
+            prev = curr->next;
+            *hand = prev;
+            curr = (prev != NULL) ? prev->next : NULL;
+            if(*reduced == NULL) {
+                *reduced = pair;
+            } else {
+                temp = *reduced;
+                while(temp->next != NULL)
+                    temp = temp->next;
+                temp->next = pair;
+            }
+            isChange = 1;
+        }
+        else if(curr->next != NULL && curr->rank == curr->next->rank) {
             pair = curr;
             curr = curr->next->next;
             pair->next->next = NULL;
