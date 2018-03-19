@@ -18,6 +18,32 @@ struct Card {
     struct Card *next;
 };
 
+/* prototype */
+void initrand(int);
+int nextrand();
+void readDeck(char(*)[3]);
+void insertToHand(struct Card**, char []);
+void initHand(int*, struct Card**, int);
+int rdcHand(struct Card**, struct Card**);
+void printHand(int, struct Card*, char*);
+void makeRequest(int, char(*), struct Card*, int);
+void handleRequest(int, char c, struct Card **, struct Card *, int pnt);
+void handleResult(int, char(*), struct Card**, struct Card**, int);
+void startGame(const int N_CHILD);
+
+/* Main */
+int main(int argc, char *argv[]) {
+    int nChild = atoi(argv[1]);
+
+    if(nChild < 2 || nChild > 8) {
+        printf("Player range should be 2 to 8...\n");
+        return 0;
+    }
+    startGame(nChild);
+    return 0;
+}
+
+/* Functions */
 void initrand(int myid) {
     seed = myid - 1;
 }
@@ -106,7 +132,7 @@ void initHand(int *child, struct Card **head, int num) {
     }
 }
 
-int rdcHand(struct Card **hand, struct Card **reduced) {
+int rdcHand(struct Card **hand, struct Card **reduced) {  // Bug here!!!!!
     struct Card *curr, *prev, *pair, *temp;
     int isChange = 0;
 
@@ -118,11 +144,13 @@ int rdcHand(struct Card **hand, struct Card **reduced) {
             prev = curr->next;
             *hand = prev;
             curr = (prev != NULL) ? prev->next : NULL;
+            pair->next->next = NULL;
             if(*reduced == NULL) {
                 *reduced = pair;
             } else {
                 temp = *reduced;
                 while(temp->next != NULL)
+                printf("%s->", temp->code);
                     temp = temp->next;
                 temp->next = pair;
             }
@@ -201,7 +229,7 @@ void makeRequest(int id, char (*cmd), struct Card *head, int pnt) {
     write(pnt, cmd, BIG_BUF);
 }
 
-void handleRequest(int id, char c, struct Card **head, int pnt) {
+void handleRequest(int id, char c, struct Card **head, struct Card *reduced, int pnt) {
     struct Card *temp;
     char res[SMALL_BUF] = "";
 
@@ -220,11 +248,23 @@ void handleRequest(int id, char c, struct Card **head, int pnt) {
             temp = temp->next;
         }
     }
-    // TODO: Check if deck is empty
+    
     if(strcmp(res, "") != 0) {
-        char *tmp = strdup(res);
+        char *tmp = strdup(res), *tpp;
+        int count = 0;
+
         printHand(id+1, *head, "new hand");
-        strcpy(res,"yy");
+        strcpy(res,"y");
+        if(*head == NULL) {
+            strcat(res, "n");
+            temp = reduced;
+            while(temp != NULL) {
+                temp = temp->next;
+                count++;
+            }
+            sprintf(tpp, "won %d pairs", count);
+            printHand(id+1, reduced, tpp);
+        } else strcat(res, "y");
         strcat(res, tmp);
         free(tmp);
     }
@@ -244,7 +284,17 @@ void handleResult(int id, char (*cmd), struct Card **hand, struct Card **reduced
             printHand(id+1, *hand, "reduced hand");
     }
     if(*hand == NULL){
-        strcpy(cmd,"y");
+        struct Card *temp;
+        int count = 0;
+        char *tpp;
+        strcpy(cmd,"e");
+        temp = *reduced;
+            while(temp != NULL) {
+                printf("%s->",temp->code);
+                temp = temp->next;
+                count++;
+            }
+        sprintf(tpp, "won %d pairs", count);
     }
     write(pnt, cmd, BIG_BUF);
     // TODO: check hand is empty, which stops the child process
@@ -285,7 +335,6 @@ void startGame(const int N_CHILD) {
                     close(toParent[j][1]);
                 }
             }
-
             initrand(i+1);
             initHand(toChild[i], &hand, nCard); // Get initial card
             printHand(i+1, hand, "initial hand");
@@ -302,20 +351,26 @@ void startGame(const int N_CHILD) {
                         makeRequest(i, cmdBuf, hand, toParent[i][1]);
                         break;
                     case 'h':
-                        handleRequest(i, cmdBuf[2], &hand, toParent[i][1]);
+                        handleRequest(i, cmdBuf[2], &hand, reduced, toParent[i][1]);
+                        if(hand == NULL) {
+                            printf("FUCKKKKKKK\n");
+                            loop = 0;
+                        }
                         break;
                     case 'y': case 'n':
                         handleResult(i, cmdBuf, &hand, &reduced, toParent[i][1]);
+                        if(hand == NULL) {
+                            printf("FUCKKKKKKK\n");
+                            loop = 0;
+                        }
                         break;
                     default:
                         printf("Unknown command\n");
                         loop = 0;
                         break;
                 }
-                // Main functions -- need while loop here
-                
             }
-
+            
             // printf("Child %d, pid %d: fin\n", i+1, getpid());
 
             // Finish child process
@@ -401,16 +456,4 @@ void startGame(const int N_CHILD) {
     /* prevent zombie */
     for(i = 0; i < N_CHILD; i++)
         waitpid(shut_down[i], NULL, 0);
-}
-
-
-int main(int argc, char *argv[]) {
-    int nChild = atoi(argv[1]);
-
-    if(nChild < 2 || nChild > 8) {
-        printf("Player range should be 2 to 8...\n");
-        return 0;
-    }
-    startGame(nChild);
-    return 0;
 }
