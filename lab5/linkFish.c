@@ -26,15 +26,14 @@ void insertToHand(struct Card**, char []);
 void initHand(int*, struct Card**, int);
 int rdcHand(struct Card**, struct Card**);
 void printHand(int, struct Card*, char*);
-void makeRequest(int, char(*), struct Card*, int);
+void makeRequest(int, int*, char(*), struct Card*, int);
 void handleRequest(int, char c, struct Card **, struct Card *, int pnt);
-void handleResult(int, char(*), struct Card**, struct Card**, int);
+void handleResult(int, int*, char(*), struct Card**, struct Card**, int);
 void startGame(const int N_CHILD);
 
 /* Main */
 int main(int argc, char *argv[]) {
     int nChild = atoi(argv[1]);
-
     if(nChild < 2 || nChild > 8) {
         printf("Player range should be 2 to 8...\n");
         return 0;
@@ -44,18 +43,12 @@ int main(int argc, char *argv[]) {
 }
 
 /* Functions */
-void initrand(int myid) {
-    seed = myid - 1;
-}
-
-int nextrand() {
-    return (seed++ % 99) + 1;
-}
+void initrand(int myid) { seed = myid - 1; }
+int nextrand() { return (seed++ % 99) + 1; }
 
 void readDeck(char (*deck)[3]) {
     char inbuf[BIG_BUF];
     int i, k, n;
-
     // Read < .txt file
     while((n = read(STDIN_FILENO, inbuf, BIG_BUF)) > 0) {
         i = 0, k = 0;
@@ -104,9 +97,7 @@ void insertToHand(struct Card **head, char buf[]) {
       ((*head)->rank == newCard->rank && (*head)->suit < newCard->rank)) {
         newCard->next = *head;
         *head = newCard;
-    }
-    else {
-        // Still have some issue (suit not sorted correctly)
+    } else {
         curr = *head;
         while(curr->next != NULL && curr->next->rank > newCard->rank) {
             curr = curr->next;
@@ -118,8 +109,6 @@ void insertToHand(struct Card **head, char buf[]) {
         newCard->next = curr->next;
         curr->next = newCard;
     }
-
-    
 }
 
 void initHand(int *child, struct Card **head, int num) {
@@ -190,7 +179,7 @@ void printHand(int id, struct Card *hand, char *str) {
     printf("Child %d, pid %d: %s <%s> \n", id, getpid(), str, cards);
 }
 
-void makeRequest(int id, char (*cmd), struct Card *head, int pnt) {
+void makeRequest(int id, int *x, char (*cmd), struct Card *head, int pnt) {
     int tgt, i, j, num = 0;
     char wanted;
     struct Card *temp;
@@ -199,16 +188,14 @@ void makeRequest(int id, char (*cmd), struct Card *head, int pnt) {
 
     printHand(id+1, head, "my hand");
     memmove(cmd, cmd+1, strlen(cmd));
-    cmd[id] = 'x'; // exclude itself
-    // printf("%d+++%s\n", id+1,cmd);
+    cmd[id] = 'x';
 
     i = 0, num = 0;
     while(num < tt){
         if(cmd[i] == 'p') {
             tgt = i;
             num++;
-        }
-        if(++i >= strlen(cmd)) i = 0;
+        } if(++i >= strlen(cmd)) i = 0;
     }
 
     temp = head, num = 0;
@@ -217,11 +204,10 @@ void makeRequest(int id, char (*cmd), struct Card *head, int pnt) {
         num++;
     }
     num = (ww - 1) % num, temp = head;
-    for(i = 0; i < num; i++) {
+    for(i = 0; i < num; i++)
         temp = temp->next;
-    }
     wanted = temp->code[1];
-
+    *x = tgt;
     sprintf(cmd, "%c%d%c", 'h', tgt, wanted);
     printf("Child %d, pid %d: random number %d %d, asking child %d for rank %c\n",
              id+1, getpid(), tt, ww, tgt+1, wanted);
@@ -236,15 +222,13 @@ void handleRequest(int id, char c, struct Card **head, struct Card *reduced, int
     if(temp->code[1] == c) {
         strcpy(res, temp->code);
         *head = temp->next;
-    }
-    else {
+    } else {
         while(temp->next != NULL) {
             if(temp->next->code[1] == c) {
                 strcpy(res, temp->next->code);
                 temp->next = temp->next->next;
                 break;
-            }
-            temp = temp->next;
+            } temp = temp->next;
         }
     }
     
@@ -269,17 +253,19 @@ void handleRequest(int id, char c, struct Card **head, struct Card *reduced, int
         strcat(res, tmp);
         if(*head == NULL)
             sprintf(res,"%s%d", res, count);
-    }
-    else {
+    } else {
         printf("Child %d, pid %d: go fish\n", id+1, getpid());
         strcpy(res, "ny");
-    }
-    write(pnt, res, BIG_BUF);
+    } write(pnt, res, BIG_BUF);
 }
 
-void handleResult(int id, char (*cmd), struct Card **hand, struct Card **reduced, int pnt) {
+void handleResult(int id, int *x, char (*cmd), struct Card **hand, struct Card **reduced, int pnt) {
+    int isFished = 0;
+    if(cmd[0] == 'n') isFished = 1;
     memmove(cmd, cmd+2, strlen(cmd));
     if(strcmp(cmd, "") != 0){
+        if(isFished) printf("Child %d, pid %d: drawn %s\n", id+1, getpid(), cmd);
+        else printf("Child %d, pid %d: receive %s from child %d\n", id+1, getpid(), cmd, (*x)+1);
         insertToHand(hand, cmd);
         printHand(id+1, *hand, "new hand");
         if(rdcHand(hand, reduced))
@@ -288,7 +274,6 @@ void handleResult(int id, char (*cmd), struct Card **hand, struct Card **reduced
             struct Card *temp;
             char tpp[BIG_BUF] = "";
             int count = 0;
-
             strcpy(cmd,"e");
             temp = *reduced;
             while(temp != NULL) {
@@ -301,12 +286,9 @@ void handleResult(int id, char (*cmd), struct Card **hand, struct Card **reduced
             printHand(id+1, *reduced, tpp);
         }
     }
-    else {
-        printf("Child %d, pid %d: no more card to draw\n", id+1, getpid());
-    }
+    else printf("Child %d, pid %d: no more card to draw\n", id+1, getpid());
     write(pnt, cmd, BIG_BUF);
 }
-
 
 void startGame(const int N_CHILD) {
     int toParent[N_CHILD][2], toChild[N_CHILD][2];
@@ -329,6 +311,7 @@ void startGame(const int N_CHILD) {
         } 
         else if (pid == 0) { /* child */
             struct Card *hand = NULL, *reduced = NULL;
+            int x = 0;
             // usable pipe-> read: toChild[i][0] write: toParent[i][1]
             for(j = 0; j < N_CHILD; j++){
                 close(toChild[j][1]);
@@ -349,13 +332,13 @@ void startGame(const int N_CHILD) {
                 read(toChild[i][0], cmdBuf, BIG_BUF);
                 switch(cmdBuf[0]) {
                     case 'm':
-                        makeRequest(i, cmdBuf, hand, toParent[i][1]);
+                        makeRequest(i, &x, cmdBuf, hand, toParent[i][1]);
                         break;
                     case 'h':
                         handleRequest(i, cmdBuf[2], &hand, reduced, toParent[i][1]);
                         break;
                     case 'y': case 'n':
-                        handleResult(i, cmdBuf, &hand, &reduced, toParent[i][1]);
+                        handleResult(i, &x, cmdBuf, &hand, &reduced, toParent[i][1]);
                         break;
                     default:
                         printf("Unknown command\n");
@@ -376,7 +359,7 @@ void startGame(const int N_CHILD) {
         char deck[52][3];
         int fPlayer[N_CHILD], tPlayer[N_CHILD];
         char avab[10] = "", cmdBuf[BIG_BUF] = "";
-        int record[N_CHILD], tgt;
+        int record[N_CHILD], tgt, maxPair = -1;
         // usable pipe-> read: toParent[i][0] write: toChild[i][1]
         for(i = 0; i < N_CHILD; i++) {
             close(toChild[i][0]);
@@ -441,8 +424,16 @@ void startGame(const int N_CHILD) {
                     turn = 0;
             }
         }
-        // Find winner
-        
+        for(i = 0; i < N_CHILD; i++){
+            if(maxPair < record[i]){
+                maxPair = record[i];
+                sprintf(cmdBuf, "%d", i+1);
+            } 
+            else if (maxPair == record[i]){
+                sprintf(cmdBuf, "%s/%d", cmdBuf, i+1);
+            }
+        }
+        printf("Parent: child %s is winner with %d pairs\n", cmdBuf, maxPair);
         // Close all pipe at the end
         for(j = 0; j < N_CHILD; j++) {
             close(toChild[j][1]);
