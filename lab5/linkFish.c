@@ -249,23 +249,24 @@ void handleRequest(int id, char c, struct Card **head, struct Card *reduced, int
     }
     
     if(strcmp(res, "") != 0) {
-        char *tmp = strdup(res), *tpp;
-        int count = 0;
-
+        char tmp[SMALL_BUF] = "";
         printHand(id+1, *head, "new hand");
+        strcpy(tmp,res);
         strcpy(res,"y");
         if(*head == NULL) {
+            char tpp[BIG_BUF] = "";
+            int count = 0;
             strcat(res, "n");
             temp = reduced;
             while(temp != NULL) {
                 temp = temp->next;
                 count++;
             }
-            sprintf(tpp, "won %d pairs", count);
+            count = count / 2;
+            sprintf(tpp, "won %d pairs", count); // ???
             printHand(id+1, reduced, tpp);
         } else strcat(res, "y");
         strcat(res, tmp);
-        free(tmp);
     }
     else {
         printf("Child %d, pid %d: go fish\n", id+1, getpid());
@@ -325,10 +326,8 @@ void startGame(const int N_CHILD) {
             exit(1);
         } 
         else if (pid == 0) { /* child */
-            struct Card *hand = NULL;
-            struct Card *reduced = NULL;
+            struct Card *hand = NULL, *reduced = NULL;
             int loop = 1;
-
             // usable pipe-> read: toChild[i][0] write: toParent[i][1]
             for(j = 0; j < N_CHILD; j++){
                 close(toChild[j][1]);
@@ -344,28 +343,18 @@ void startGame(const int N_CHILD) {
             if(rdcHand(&hand, &reduced))
                 printHand(i+1, hand, "reduced hand");
 
-            // while(hand != NULL)
-            while(loop) {
+            while(hand != NULL) {
                 char cmdBuf[BIG_BUF] = "";
                 read(toChild[i][0], cmdBuf, BIG_BUF);
-                // printf("%d..%s\n", i+1, cmdBuf);
                 switch(cmdBuf[0]) {
                     case 'm':
                         makeRequest(i, cmdBuf, hand, toParent[i][1]);
                         break;
                     case 'h':
                         handleRequest(i, cmdBuf[2], &hand, reduced, toParent[i][1]);
-                        if(hand == NULL) {
-                            printf("DONE!!!!\n");
-                            loop = 0;
-                        }
                         break;
                     case 'y': case 'n':
                         handleResult(i, cmdBuf, &hand, &reduced, toParent[i][1]);
-                        if(hand == NULL) {
-                            printf("DONE!!!!\n");
-                            loop = 0;
-                        }
                         break;
                     default:
                         printf("Unknown command\n");
@@ -373,15 +362,12 @@ void startGame(const int N_CHILD) {
                         break;
                 }
             }
-
             // Finish child process
             close(toChild[i][0]);
             close(toParent[i][1]);
             exit(0);
         }
-        else {
-            shut_down[i] = pid;
-        }
+        else shut_down[i] = pid;
     }
 
     if(pid > 0) { /* parent */
@@ -390,7 +376,6 @@ void startGame(const int N_CHILD) {
         int fPlayer[N_CHILD], tPlayer[N_CHILD];
         char avab[10] = "", cmdBuf[BIG_BUF] = "";
         int record[N_CHILD], tgt;
-
         // usable pipe-> read: toParent[i][0] write: toChild[i][1]
         for(i = 0; i < N_CHILD; i++) {
             close(toChild[i][0]);
@@ -401,17 +386,16 @@ void startGame(const int N_CHILD) {
         for(i = 0; i < N_CHILD; i++)
             printf("%d ", shut_down[i]);
         printf("\n");
-        readDeck(deck);
 
-        // Available player string
+        readDeck(deck);
         avab[0] = 'm';
         for(i = 1; i <= N_CHILD; i++)
             avab[i] = 'p';
+
         // Initialize player hand
         for(i = 0; i < nCard; i++)
             for(j = 0; j < N_CHILD; j++)
                 write(toChild[j][1], deck[k++], SMALL_BUF);
-
         // Play cycle
         while(loop) {
             // start turn and handle request
@@ -442,7 +426,7 @@ void startGame(const int N_CHILD) {
                 record[turn] = atoi(cmdBuf);
                 avab[turn+1] = 'x';
             }
-            printf("p->%s\n", avab);
+            
 
             if(++turn >= N_CHILD) turn = 0;
             while(avab[turn+1] == 'x') {
