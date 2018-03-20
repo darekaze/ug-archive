@@ -6,6 +6,7 @@
 #include <string.h>
 
 #define BIG_BUF 156
+#define MID_BUF 20
 #define SMALL_BUF 8
 
 pid_t getpid(void);
@@ -211,7 +212,7 @@ void makeRequest(int id, int *x, char (*cmd), struct Card *head, int pnt) {
     sprintf(cmd, "%c%d%c", 'h', tgt, wanted);
     printf("Child %d, pid %d: random number %d %d, asking child %d for rank %c\n",
              id+1, getpid(), tt, ww, tgt+1, wanted);
-    write(pnt, cmd, BIG_BUF);
+    write(pnt, cmd, SMALL_BUF);
 }
 
 void handleRequest(int id, char c, struct Card **head, struct Card *reduced, int pnt) {
@@ -256,7 +257,7 @@ void handleRequest(int id, char c, struct Card **head, struct Card *reduced, int
     } else {
         printf("Child %d, pid %d: go fish\n", id+1, getpid());
         strcpy(res, "ny");
-    } write(pnt, res, BIG_BUF);
+    } write(pnt, res, SMALL_BUF);
 }
 
 void handleResult(int id, int *x, char (*cmd), struct Card **hand, struct Card **reduced, int pnt) {
@@ -272,7 +273,7 @@ void handleResult(int id, int *x, char (*cmd), struct Card **hand, struct Card *
             printHand(id+1, *hand, "reduced hand");
         if(*hand == NULL) {
             struct Card *temp;
-            char tpp[BIG_BUF] = "";
+            char tpp[MID_BUF] = "";
             int count = 0;
             strcpy(cmd,"e");
             temp = *reduced;
@@ -287,7 +288,7 @@ void handleResult(int id, int *x, char (*cmd), struct Card **hand, struct Card *
         }
     }
     else printf("Child %d, pid %d: no more card to draw\n", id+1, getpid());
-    write(pnt, cmd, BIG_BUF);
+    write(pnt, cmd, SMALL_BUF);
 }
 
 void startGame(const int N_CHILD) {
@@ -310,7 +311,7 @@ void startGame(const int N_CHILD) {
             exit(1);
         } 
         else if (pid == 0) { /* child */
-            struct Card *hand = NULL, *reduced = NULL;
+            struct Card *hand = NULL, *reduced = NULL, *temp;
             int x = 0;
             // usable pipe-> read: toChild[i][0] write: toParent[i][1]
             for(j = 0; j < N_CHILD; j++){
@@ -347,6 +348,13 @@ void startGame(const int N_CHILD) {
                 }
             }
             // Finish child process
+            free(hand);
+            temp = reduced;
+            while (temp != NULL) {
+                temp = temp->next;
+                free(temp);
+            }
+            free(reduced);
             close(toChild[i][0]);
             close(toParent[i][1]);
             exit(0);
@@ -383,16 +391,16 @@ void startGame(const int N_CHILD) {
         // Play cycle
         while(1) {
             // start turn and handle request
-            write(toChild[turn][1], avab, BIG_BUF);
-            read(toParent[turn][0], cmdBuf, BIG_BUF);
+            write(toChild[turn][1], avab, MID_BUF);
+            read(toParent[turn][0], cmdBuf, MID_BUF);
             tgt = (int)cmdBuf[1] - '0';
-            write(toChild[tgt][1], cmdBuf, BIG_BUF);
+            write(toChild[tgt][1], cmdBuf, MID_BUF);
 
             // handle result (include player status and result)
-            read(toParent[tgt][0], cmdBuf, BIG_BUF);
-            if(cmdBuf[0] == 'n' && k <= 52) {
+            read(toParent[tgt][0], cmdBuf, MID_BUF);
+            if(k < 53 && cmdBuf[0] == 'n') {
                 sprintf(cmdBuf,"%s%s", cmdBuf, deck[k++]);
-            } else if(cmdBuf[1] == 'n') { // problem
+            } else if(cmdBuf[1] == 'n') {
                 char tpt[SMALL_BUF];
                 strcpy(tpt, cmdBuf);
                 memmove(tpt, tpt+4, strlen(tpt));
