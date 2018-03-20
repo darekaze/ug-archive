@@ -364,7 +364,7 @@ void startGame(const int N_CHILD) {
 
     if(pid > 0) { /* parent */
         int k = 0, turn = 0, isFinished = 0;
-        char deck[52][3];
+        char deck[52][3] = {0};
         int fPlayer[N_CHILD], tPlayer[N_CHILD];
         char avab[10] = "", cmdBuf[BIG_BUF] = "";
         int record[N_CHILD], tgt, maxPair = -1;
@@ -398,7 +398,7 @@ void startGame(const int N_CHILD) {
 
             // handle result (include player status and result)
             read(toParent[tgt][0], cmdBuf, MID_BUF);
-            if(k < 53 && cmdBuf[0] == 'n') {
+            if(k < 52 && cmdBuf[0] == 'n') {
                 sprintf(cmdBuf,"%s%s", cmdBuf, deck[k++]);
             } else if(cmdBuf[1] == 'n') {
                 char tpt[SMALL_BUF];
@@ -433,7 +433,7 @@ void startGame(const int N_CHILD) {
             }
         }
         for(i = 0; i < N_CHILD; i++){
-            if(maxPair < record[i]){
+            if(maxPair < record[i]) {
                 maxPair = record[i];
                 sprintf(cmdBuf, "%d", i+1);
             } 
