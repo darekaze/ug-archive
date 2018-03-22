@@ -291,6 +291,31 @@ void handleResult(int id, int *x, char (*cmd), struct Card **hand, struct Card *
     write(pnt, cmd, SMALL_BUF);
 }
 
+void singleFisher(int id, char (*cmd), struct Card **hand, struct Card **reduced, int pnt) {
+    memmove(cmd, cmd+1, strlen(cmd));
+    printf("Child %d, pid %d: only me, go fish directly, drawn %s\n", id+1, getpid(), cmd);
+    insertToHand(hand, cmd);
+    printHand(id+1, *hand, "new hand");
+    rdcHand(hand, reduced);
+    printHand(id+1, *hand, "reduced hand");
+    if(*hand == NULL) {
+        struct Card *temp;
+        char tpp[MID_BUF] = "";
+        int count = 0;
+        strcpy(cmd,"e");
+        temp = *reduced;
+        while(temp != NULL) {
+            temp = temp->next;
+            count++;
+        }
+        count = count / 2;
+        sprintf(tpp, "won %d pairs", count);
+        sprintf(cmd, "%s%d", cmd, count);
+        printHand(id+1, *reduced, tpp);
+    }
+    write(pnt, cmd, SMALL_BUF);
+}
+
 void startGame(const int N_CHILD) {
     int toParent[N_CHILD][2], toChild[N_CHILD][2];
     pid_t shut_down[N_CHILD];
@@ -341,6 +366,9 @@ void startGame(const int N_CHILD) {
                     case 'y': case 'n':
                         handleResult(i, &x, cmdBuf, &hand, &reduced, toParent[i][1]);
                         break;
+                    case 'g':
+                        singleFisher(i, cmdBuf, &hand, &reduced, toParent[i][1]);
+                        break;
                     default:
                         printf("Unknown command\n");
                         exit(1);
@@ -388,8 +416,7 @@ void startGame(const int N_CHILD) {
         for(i = 0; i < nCard; i++)
             for(j = 0; j < N_CHILD; j++)
                 write(toChild[j][1], deck[k++], SMALL_BUF);
-        // Play cycle
-        while(1) {
+        while(1) { // Play cycle
             // start turn and handle request
             write(toChild[turn][1], avab, MID_BUF);
             read(toParent[turn][0], cmdBuf, MID_BUF);
@@ -419,9 +446,10 @@ void startGame(const int N_CHILD) {
                 avab[turn+1] = 'x';
             }
 
+            // only one also break the loop
             for(i = 0, j = 0; i <= N_CHILD; i++) {
                 if(avab[i] == 'x') j++;
-                if(j >= N_CHILD) isFinished = 1;
+                if(j >= N_CHILD - 1) isFinished = 1;
             }
             if(isFinished) break;
 
@@ -432,6 +460,26 @@ void startGame(const int N_CHILD) {
                     turn = 0;
             }
         }
+        // check single?
+        for(i = 0; i <= N_CHILD; i++) {
+            if(avab[i] == 'p'){
+                int lone = i - 1;
+                while(k < 52) {
+                    sprintf(cmdBuf,"%c%s", 'g', deck[k++]);
+                    printf("%d hand:%d %s\n", i, k, cmdBuf);
+                    write(toChild[lone][1], cmdBuf, MID_BUF);
+                    read(toParent[lone][0], cmdBuf, BIG_BUF);
+                    if(cmdBuf[0] == 'e') {
+                        memmove(cmdBuf, cmdBuf+1, strlen(cmdBuf));
+                        record[turn] = atoi(cmdBuf);
+                        avab[turn+1] = 'x';
+                        break;
+                    }
+                }
+                break;
+            }
+        }
+
         for(i = 0; i < N_CHILD; i++){
             if(maxPair < record[i]) {
                 maxPair = record[i];
@@ -441,6 +489,8 @@ void startGame(const int N_CHILD) {
                 sprintf(cmdBuf, "%s/%d", cmdBuf, i+1);
             }
         }
+
+        // Add only me situation
         printf("Parent: child %s is winner with %d pairs\n", cmdBuf, maxPair);
         // Close all pipe at the end
         for(j = 0; j < N_CHILD; j++) {
