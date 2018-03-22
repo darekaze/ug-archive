@@ -95,7 +95,7 @@ void insertToHand(struct Card **head, char buf[]) {
     }
     newCard->next = NULL;
     if(*head == NULL || (*head)->rank < newCard->rank ||
-      ((*head)->rank == newCard->rank && (*head)->suit < newCard->rank)) {
+      ((*head)->rank == newCard->rank && (*head)->suit < newCard->suit)) {
         newCard->next = *head;
         *head = newCard;
     } else {
@@ -470,8 +470,8 @@ void startGame(const int N_CHILD) {
                     read(toParent[lone][0], cmdBuf, BIG_BUF);
                     if(cmdBuf[0] == 'e') {
                         memmove(cmdBuf, cmdBuf+1, strlen(cmdBuf));
-                        record[turn] = atoi(cmdBuf);
-                        avab[turn+1] = 'x';
+                        record[lone] = atoi(cmdBuf);
+                        avab[lone+1] = 'x';
                         break;
                     }
                 }
