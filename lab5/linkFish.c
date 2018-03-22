@@ -460,13 +460,12 @@ void startGame(const int N_CHILD) {
                     turn = 0;
             }
         }
-        // check single?
+        // check for the only person who is still playing (if any)
         for(i = 0; i <= N_CHILD; i++) {
             if(avab[i] == 'p'){
                 int lone = i - 1;
                 while(k < 52) {
                     sprintf(cmdBuf,"%c%s", 'g', deck[k++]);
-                    printf("%d hand:%d %s\n", i, k, cmdBuf);
                     write(toChild[lone][1], cmdBuf, MID_BUF);
                     read(toParent[lone][0], cmdBuf, BIG_BUF);
                     if(cmdBuf[0] == 'e') {
