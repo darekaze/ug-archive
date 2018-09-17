@@ -1,3 +1,3 @@
-# Whatever-C
+# DaRekaze's Code Archive
 
-Just a bunch of c files lol
+This is my code assignment archive. Feel free to take them as your reference.
