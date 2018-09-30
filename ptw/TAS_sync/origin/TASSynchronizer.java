@@ -60,202 +60,202 @@ public class TASSynchronizer {
   public static boolean replicateTimeTable(String period, String sem, String room, String subject) throws Exception {
   	init();
   	String rst = "";
-	String condition=""; 
-	String delCondition="";
-	
-	System.out.print("TASSynchronizer.replicateTimeTable(): Collecting Room Information, sucessful = ");
-	boolean r = getRemoteRoomList();
-	System.out.println(r);
-	System.out.println();
-	
-	System.out.print("TASSynchronizer.replicateTimeTable(): Collecting TAS Basic Information, sucessful = ");
-	r = getTASInfo(period);
-	System.out.println(r);
-	System.out.println();
-	
-  	if (condition==null) condition="";
-  	//if (condition.equals("")) condition="a.Period='"+period+"'"; 
-	
-	condition += "a.Period='"+period+"'  and a.STerm<="+sem+" and " + sem+"<=a.ETerm"; 
-	delCondition += "tas_import=1 and tas_period='"+period+"' and tas_sem='"+sem+"'"; 
-	
-	if (room!=null) {
-		condition += " and venue='"+room+"'"; 
-		delCondition += " and room_id="+roomToID.get("room");
-	}
-	if (subject!=null) {
-		condition += " and a.subject_code='"+subject+"'"; 
-		delCondition += " and tas_subject_code='"+subject+"'";
-	}
-
-  	try {	
-
-		//String sql = "select " + fieldListAssignmentTimeTable + " from "+assigmentTimeTableTAS+" where " + condition;
+		String condition=""; 
+		String delCondition="";
 		
-		System.out.println("Replicating Assignment TimeTable having condition "+condition);
-		String sql="";
-
-		sql = "select JobNo,subject_code,shour,ehour,wday,venue from assignment_timetable a where " + condition ;
-		sql += " group by JobNo,subject_code,shour,ehour,wday,venue"; 
-		sql +=" order by a.subject_code "; 
-		//System.out.println("sql=\n"+sql);
+		System.out.print("TASSynchronizer.replicateTimeTable(): Collecting Room Information, sucessful = ");
+		boolean r = getRemoteRoomList();
+		System.out.println(r);
 		System.out.println();
 		
-		System.out.println("TASSynchronizer.replicateTimeTable() : Connecting to DB "+db_server+" by " + username);
+		System.out.print("TASSynchronizer.replicateTimeTable(): Collecting TAS Basic Information, sucessful = ");
+		r = getTASInfo(period);
+		System.out.println(r);
 		System.out.println();
+		
+			if (condition==null) condition="";
+			//if (condition.equals("")) condition="a.Period='"+period+"'"; 
+		
+		condition += "a.Period='"+period+"'  and a.STerm<="+sem+" and " + sem+"<=a.ETerm"; 
+		delCondition += "tas_import=1 and tas_period='"+period+"' and tas_sem='"+sem+"'"; 
+		
+		if (room!=null) {
+			condition += " and venue='"+room+"'"; 
+			delCondition += " and room_id="+roomToID.get("room");
+		}
+		if (subject!=null) {
+			condition += " and a.subject_code='"+subject+"'"; 
+			delCondition += " and tas_subject_code='"+subject+"'";
+		}
+
+			try {	
+
+			//String sql = "select " + fieldListAssignmentTimeTable + " from "+assigmentTimeTableTAS+" where " + condition;
+			
+			System.out.println("Replicating Assignment TimeTable having condition "+condition);
+			String sql="";
+
+			sql = "select JobNo,subject_code,shour,ehour,wday,venue from assignment_timetable a where " + condition ;
+			sql += " group by JobNo,subject_code,shour,ehour,wday,venue"; 
+			sql +=" order by a.subject_code "; 
+			//System.out.println("sql=\n"+sql);
+			System.out.println();
+			
+			System.out.println("TASSynchronizer.replicateTimeTable() : Connecting to DB "+db_server+" by " + username);
+			System.out.println();
+					
+			Class.forName(db_driver);	
+			//System.out.println("TASSynchronizer.replicateTimeTable(String,String,String,String) : Connecting to "+db_connection_string+" by "+username+" with password length "+password.length());
+
+					Connection conn = DriverManager.getConnection(db_connection_string,username,password);
+					PreparedStatement pstmtLocal = conn.prepareStatement(sql);
+					ResultSet rs = pstmtLocal.executeQuery();
 				
-		Class.forName(db_driver);	
-		//System.out.println("TASSynchronizer.replicateTimeTable(String,String,String,String) : Connecting to "+db_connection_string+" by "+username+" with password length "+password.length());
+					Class.forName(rbsDriver).newInstance();
+					Connection rbsconn = DriverManager.getConnection(rbsConnectionString); //,rbsUsername,rbsPassword);        
+					rbsconn.setAutoCommit(false);
 
-        Connection conn = DriverManager.getConnection(db_connection_string,username,password);
-        PreparedStatement pstmtLocal = conn.prepareStatement(sql);
-        ResultSet rs = pstmtLocal.executeQuery();
-  		
-        Class.forName(rbsDriver).newInstance();
-        Connection rbsconn = DriverManager.getConnection(rbsConnectionString); //,rbsUsername,rbsPassword);        
-        rbsconn.setAutoCommit(false);
-
-		System.out.print("Removing record from RBS before replicatiion for condition " + delCondition + " .... ");
-		sql = "delete from mrbs_entry where " + delCondition;
-		PreparedStatement ps = rbsconn.prepareStatement(sql);
-		ps.execute();
-		//sql = "delete from mrbs_repeat where tas_period='"+period+"' and tas_sem='"+sem+"'";
-		sql = "delete from mrbs_repeat where " + delCondition;
-		ps = rbsconn.prepareStatement(sql);
-		ps.execute();
-		ps.close();
-		System.out.println("done");
-		System.out.println();
-		
-        //PreparedStatement pstmt = rbsconn.prepareStatement(sql);
-		//ResultSet rs = pstmt.executeQuery();
-		Vector v = new Vector();
-      
-		int count=0;
-		int done=0;
-      	int SID; 
-	    if (rs!=null) {    	                
-			while (rs.next()) {
-				try {
-					Hashtable ht = new Hashtable();
-					count++;
-					//SID	= rsLocal.getInt("SID");
-					//String tassid = rs.getString("SID");
-					String jobno = rs.getString("jobno");
-					String subjectCode = rs.getString("subject_code");
-					String shour = rs.getString("shour");
-					String start_seconds = new String(convertToSeconds(shour)+"");
-					String ehour = rs.getString("ehour");
-					String end_seconds = new String(convertToSeconds(ehour)+""); 
-					String wday=rs.getString("wday");
-					String rep_day=convertToDayOfWeek(wday)+"";
-					String venue = rs.getString("venue");
-					//String subjectTitle=rs.getString("subject_title");
-					//String sname=rs.getString("sname");
-					
-					System.out.println("TASSynchronizer.replicateTimeTable(): Processing "+subjectCode+ " on " +wday + " " + shour + "-" + ehour + " at " + venue);
-					
-					String subjectTitle="";
+			System.out.print("Removing record from RBS before replicatiion for condition " + delCondition + " .... ");
+			sql = "delete from mrbs_entry where " + delCondition;
+			PreparedStatement ps = rbsconn.prepareStatement(sql);
+			ps.execute();
+			//sql = "delete from mrbs_repeat where tas_period='"+period+"' and tas_sem='"+sem+"'";
+			sql = "delete from mrbs_repeat where " + delCondition;
+			ps = rbsconn.prepareStatement(sql);
+			ps.execute();
+			ps.close();
+			System.out.println("done");
+			System.out.println();
+			
+					//PreparedStatement pstmt = rbsconn.prepareStatement(sql);
+			//ResultSet rs = pstmt.executeQuery();
+			Vector v = new Vector();
+				
+			int count=0;
+			int done=0;
+					int SID; 
+				if (rs!=null) {    	                
+				while (rs.next()) {
 					try {
-						subjectTitle = ((Subject)subjectHT.get(subjectCode)).subject_title;
-					} catch (Exception e) {
-						System.out.println("*** ERROR: TASSynchronizer.replicateTimeTable(): subject title of " + subjectCode + " not available");
-					}
-					
-					String sname = "";
-					String description = "";
-					try {
-						sname = ((TeachingRequirement)teachingRequirementHT.get(jobno)).getStaffNameList();
-						description = subjectTitle+" (" + sname + ")";
-						System.out.println("TASSynchronizer.replicateTimeTable():  by " + sname );
-					} catch (Exception e) {
-						System.out.println("*** ERROR: TASSynchronizer.replicateTimeTable(): Teaching Requirement of " + jobno + " subject code " + subjectCode + "  not available");
-					}
-
-					
-					if (!rep_day.equals("-1") && roomToAreaID.get(venue)!=null && roomToID.get(venue)!=null) {
-						done++;
-						ht.put("name",subjectCode);
-						ht.put("description",description);
-						ht.put("start_day",start_day);
-						ht.put("start_month",start_month);
-						ht.put("start_year",start_year);
-						ht.put("start_seconds",start_seconds);
-						ht.put("end_day",start_day);
-						ht.put("end_month",start_month);
-						ht.put("end_year",start_year);
-						ht.put("end_seconds",end_seconds); 
-						ht.put("area",(String)roomToAreaID.get(venue));
-						ht.put("rooms[]",(String)roomToID.get(venue));
-						ht.put("type","I");
-						ht.put("confirmed","1");
-						ht.put("private","0");
-						ht.put("f_tas_import","1");					
-						ht.put("f_tas_period",period);
-						ht.put("f_tas_sem",sem);
-						ht.put("f_tas_user_comp_acc","");
-						ht.put("rep_type","2");
-						ht.put("rep_end_day",end_day);
-						ht.put("rep_end_month",end_month);
-						ht.put("rep_end_year",end_year);
-						ht.put("rep_day[]",rep_day);
-						ht.put("rep_num_weeks","");
-						ht.put("returl","");
-						ht.put("create_by","cspaulin");
-						ht.put("rep_id","0");
-						ht.put("edit_type","series");
-						ht.put("f_tas_subject_code",subjectCode);					
+						Hashtable ht = new Hashtable();
+						count++;
+						//SID	= rsLocal.getInt("SID");
+						//String tassid = rs.getString("SID");
+						String jobno = rs.getString("jobno");
+						String subjectCode = rs.getString("subject_code");
+						String shour = rs.getString("shour");
+						String start_seconds = new String(convertToSeconds(shour)+"");
+						String ehour = rs.getString("ehour");
+						String end_seconds = new String(convertToSeconds(ehour)+""); 
+						String wday=rs.getString("wday");
+						String rep_day=convertToDayOfWeek(wday)+"";
+						String venue = rs.getString("venue");
+						//String subjectTitle=rs.getString("subject_title");
+						//String sname=rs.getString("sname");
 						
-						/*
-						ht.put("tas_import","1");
-						ht.put("tas_period",period);
-						ht.put("tas_sem",sem);
-						*/
-						ht.put("f_tas_syndate",getCurrentDateFormatted());
-						//ht.put("tas_sid",tassid);
+						System.out.println("TASSynchronizer.replicateTimeTable(): Processing "+subjectCode+ " on " +wday + " " + shour + "-" + ehour + " at " + venue);
 						
-						v.add(ht);
-						//insertToRemoteDB(rbsconn,ht);
-						callInsertBookingURL(ht);
-					} else {
-						System.out.println("Not replicating " + subjectCode+" by " + sname +" " + wday + " " + shour +"-" + ehour + " at " + venue);
-					}
-					System.out.println();
-				} catch (Exception e1) {
-					System.out.println("*** ERROR: TASSynchronizer.replicateTimeTable(): " + e1.getMessage());
-					e1.printStackTrace();
-				}
-			} 
-        }
-		System.out.println("Count Matching condition = "+count+", done = " + done + "\n");
-        
-        rbsconn.commit();  
-        rbsconn.close();   
-                						
-       	rs.close();
-		conn.close();  
+						String subjectTitle="";
+						try {
+							subjectTitle = ((Subject)subjectHT.get(subjectCode)).subject_title;
+						} catch (Exception e) {
+							System.out.println("*** ERROR: TASSynchronizer.replicateTimeTable(): subject title of " + subjectCode + " not available");
+						}
+						
+						String sname = "";
+						String description = "";
+						try {
+							sname = ((TeachingRequirement)teachingRequirementHT.get(jobno)).getStaffNameList();
+							description = subjectTitle+" (" + sname + ")";
+							System.out.println("TASSynchronizer.replicateTimeTable():  by " + sname );
+						} catch (Exception e) {
+							System.out.println("*** ERROR: TASSynchronizer.replicateTimeTable(): Teaching Requirement of " + jobno + " subject code " + subjectCode + "  not available");
+						}
 
-		rst="TASSynchronizer.replicateTimeTable() : Finished\n";   
-		
-		System.out.println(rst); 
-		
-  	} catch (Exception e) {
-		e.printStackTrace();
-  		rst=e.getMessage();
-  	} 	
-  	return r;	
+						
+						if (!rep_day.equals("-1") && roomToAreaID.get(venue)!=null && roomToID.get(venue)!=null) {
+							done++;
+							ht.put("name",subjectCode);
+							ht.put("description",description);
+							ht.put("start_day",start_day);
+							ht.put("start_month",start_month);
+							ht.put("start_year",start_year);
+							ht.put("start_seconds",start_seconds);
+							ht.put("end_day",start_day);
+							ht.put("end_month",start_month);
+							ht.put("end_year",start_year);
+							ht.put("end_seconds",end_seconds); 
+							ht.put("area",(String)roomToAreaID.get(venue));
+							ht.put("rooms[]",(String)roomToID.get(venue));
+							ht.put("type","I");
+							ht.put("confirmed","1");
+							ht.put("private","0");
+							ht.put("f_tas_import","1");					
+							ht.put("f_tas_period",period);
+							ht.put("f_tas_sem",sem);
+							ht.put("f_tas_user_comp_acc","");
+							ht.put("rep_type","2");
+							ht.put("rep_end_day",end_day);
+							ht.put("rep_end_month",end_month);
+							ht.put("rep_end_year",end_year);
+							ht.put("rep_day[]",rep_day);
+							ht.put("rep_num_weeks","");
+							ht.put("returl","");
+							ht.put("create_by","cspaulin");
+							ht.put("rep_id","0");
+							ht.put("edit_type","series");
+							ht.put("f_tas_subject_code",subjectCode);					
+							
+							/*
+							ht.put("tas_import","1");
+							ht.put("tas_period",period);
+							ht.put("tas_sem",sem);
+							*/
+							ht.put("f_tas_syndate",getCurrentDateFormatted());
+							//ht.put("tas_sid",tassid);
+							
+							v.add(ht);
+							//insertToRemoteDB(rbsconn,ht);
+							callInsertBookingURL(ht);
+						} else {
+							System.out.println("Not replicating " + subjectCode+" by " + sname +" " + wday + " " + shour +"-" + ehour + " at " + venue);
+						}
+						System.out.println();
+					} catch (Exception e1) {
+						System.out.println("*** ERROR: TASSynchronizer.replicateTimeTable(): " + e1.getMessage());
+						e1.printStackTrace();
+					}
+				} 
+					}
+			System.out.println("Count Matching condition = "+count+", done = " + done + "\n");
+					
+					rbsconn.commit();  
+					rbsconn.close();   
+															
+					rs.close();
+			conn.close();  
+
+			rst="TASSynchronizer.replicateTimeTable() : Finished\n";   
+			
+			System.out.println(rst); 
+			
+			} catch (Exception e) {
+			e.printStackTrace();
+				rst=e.getMessage();
+			} 	
+			return r;	
   }
   
   public static String getCurrentDateFormatted() {
-	String r="";
-	java.util.Date d = new java.util.Date();
-	SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-	r = sdf.format(d);
-	return r;
+		String r="";
+		java.util.Date d = new java.util.Date();
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		r = sdf.format(d);
+		return r;
   }
 
   public static boolean getRemoteRoomList() {
-	init();
+		init();
   	//String r="";
   	boolean r=false;
   	try {
@@ -284,9 +284,8 @@ public class TASSynchronizer {
   	return r;	
   }
 
-  
   public static boolean getTASInfo(String period) {
-	init();
+		init();
   	boolean r=false;
   	try {
 		Class.forName(db_driver);	
@@ -344,9 +343,9 @@ public class TASSynchronizer {
   }
   
   public static Hashtable getTeachingRequirementStaff(String jobno,String period, Connection conn) {
-	Hashtable sHT = new Hashtable();
-	init();
-	try {
+		Hashtable sHT = new Hashtable();
+		init();
+		try {
 		//Class.forName(db_driver);	
         //Connection conn = DriverManager.getConnection(db_connection_string,username,password);
 		String sql = "select sid from assignment_timetable where jobno='"+jobno+"'" + " and period='"+period+"'";
@@ -359,37 +358,36 @@ public class TASSynchronizer {
 			}
 		}
 		rs.close();
-	} catch (Exception e) {
-		e.printStackTrace();
-	}
-	return sHT; 
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return sHT; 
   }
   
   public static int convertToSeconds(String t) {
-	int r=0;
-	int i = t.indexOf(":");
-	int h=Integer.parseInt(t.substring(0,i));
-	int m=Integer.parseInt(t.substring(i+1,t.length()));
-	r= (h*60+m)*60;
-	return r;
+		int r=0;
+		int i = t.indexOf(":");
+		int h=Integer.parseInt(t.substring(0,i));
+		int m=Integer.parseInt(t.substring(i+1,t.length()));
+		r= (h*60+m)*60;
+		return r;
   }
-
 
   public static int convertToDayOfWeek(String t) {
-	int r=-1;
-	if (t==null) t="";
-	t=t.toUpperCase();
-	if (t.equals("SUN")) r=0;
-	if (t.equals("MON")) r=1;
-	if (t.equals("TUE")) r=2;
-	if (t.equals("WED")) r=3;
-	if (t.equals("THU")) r=4;
-	if (t.equals("FRI")) r=5;
-	if (t.equals("SAT")) r=6;	
-	return r;
+		int r=-1;
+		if (t==null) t="";
+		t=t.toUpperCase();
+		if (t.equals("SUN")) r=0;
+		if (t.equals("MON")) r=1;
+		if (t.equals("TUE")) r=2;
+		if (t.equals("WED")) r=3;
+		if (t.equals("THU")) r=4;
+		if (t.equals("FRI")) r=5;
+		if (t.equals("SAT")) r=6;	
+		return r;
   }
 
-   public static void callInsertBookingURL(Hashtable ht) throws Exception {
+  public static void callInsertBookingURL(Hashtable ht) throws Exception {
 
 		init();
 
@@ -448,7 +446,7 @@ public class TASSynchronizer {
             // immediate deallocation of all system resources
             httpclient.getConnectionManager().shutdown();
         }
-    }  
+  }  
 	
 	public static List <NameValuePair> getNameValuePair(Hashtable ht) {
 		List <NameValuePair> nvps = new ArrayList <NameValuePair>();
@@ -497,7 +495,6 @@ public class TASSynchronizer {
 		return r;
 	}
 	
-	
 	public static Hashtable getTestHT() {
 		Hashtable ht = new Hashtable();
 					ht.put("name","COMP001");
@@ -536,7 +533,6 @@ public class TASSynchronizer {
 		
 		return ht;
 	}
-	
 	
   public static String testRemoteConn() {
   	init();
