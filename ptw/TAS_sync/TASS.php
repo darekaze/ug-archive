@@ -168,10 +168,13 @@ function getTeachingRequirementStaff($jobno, $period, $conn) {
     return $sHT;
 }
 
-function callInsertBookingURL($ht) {}
+function callInsertBookingURL($ht) {
+    // TODO: ..
+    $configs = init();
+}
 
 
-// ---------------Short function-----------//
+// ---------------Short function (without init)-----------//
 
 function convertToSeconds($t) {
     return (strtotime($t) - strtotime('TODAY'));
@@ -221,11 +224,45 @@ function getTestHT() {
 }
 
 function testRemoteConn() {
+    $configs = init();
+    $r = "";
+    try {
+        $rbsconn = new mysqli($configs->rbs_db, $configs->rbs_username, $configs->rbs_password); // rbsUsername,rbsPassword
+        if ($rbsconn->connect_error) {
+            throw new Exception("Connection failed: " . $rbsconn->connect_error);
+        }
+        $rbsconn->close();
+        $r = "TASSynchronizer.testRemoteConn : Finished";
 
+    } catch (Exception $e) {
+        echo "TASSynchronizer.testRemoteConn : Error while creating ORA-Conn Object";
+        $r = $e->getMessage();
+        echo $r;	
+    }
+    return $r;
 }
 
 function testLocalConn() {
+    $configs = init();
+    $r = "";
 
+    try {
+        echo "TASSynchronizer.testLocalConn : Using Oracle";
+        echo "TASSynchronizer.testLocalConn : Connecting to {$configs->TAS_db} by {$configs->TAS_username} with password length " . strlen($configs->TAS_password);
+        
+        $conn = oci_connect($configs->TAS_username, $configs->TAS_password, $configs->TAS_db);
+        if (!$conn) {
+            throw new Exception("Connection failed: " . oci_error());
+        }
+        oci_close($conn);
+        $r = "TASSynchronizer.testLocalConn : Finished";
+
+    } catch (Exception $e) {
+        echo "TASSynchronizer.testLocalConn : Error while creating ORA-Conn Object";
+        $r = $e->getMessage();
+        echo $r;
+    }
+    return $r;
 }
 
 //////////////////////////////
@@ -242,7 +279,8 @@ function init() {
 function start() {
     $configs = init();
     echo "Replicating TAS Timetable\n";	
-    replicateTimeTable($configs->period, $configs->sem, null, null);
+    // replicateTimeTable($configs->period, $configs->sem, null, null);
+    testLocalConn();
 }
 
 start();
