@@ -1,7 +1,7 @@
 <?php
 // To include, use: $configs = include('config.php');
 return (object) array(
-    'TAS_db' => 'xxx.comp.polyu.edu.hk/xxx',
+    'TAS_db' => '//xxx.comp.polyu.edu.hk:1521/xxx',
     'TAS_username' => 'xxx',
     'TAS_password' => 'xxx',
     
