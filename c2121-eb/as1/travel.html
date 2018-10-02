@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <link rel="stylesheet" href="assets/css/basic.css">
+  <link rel="stylesheet" href="assets/css/navmenu.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css?family=Nunito:300,400,700');
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Nunito',sans-serif;
+      min-height: 100vh;
+      margin: 0;
+    }
+  </style>
+  <title>Travel to Macau</title>
+</head>
+
+<body>
+  <div class="menu-button noselect" onclick="openNav()"><span style="font-size: 0.91em"><em>&#9776;</em></span> Menu</div>
+  <div id="mySidenav" class="sidenav">
+      <a href="javascript:void(0)" class="closebtn noselect" onclick="closeNav()">&times;</a>
+      <a href="#">Travel</a>
+      <a href="#">Transport</a>
+      <a href="#">Food</a>
+      <a href="#">Shopping</a>
+      <a href="#">Accommodations</a>
+      <a href="#">About</a>
+  </div>
+
+  <div class="container">
+    <div class="header">PUT parallax here</div>
+
+    <div class="content">
+      <section class="m-intro">
+        <div class="m-intro-content">
+          <h1>Macau</h1>
+          <p>Lorem ipsum dolor sit amet consectetur adipisicing elit. Similique possimus, quo eos, a, eveniet eaque
+            reprehenderit praesentium totam maxime obcaecati assumenda facilis deserunt maiores cupiditate dicta omnis
+            necessitatibus nesciunt! Laborum!</p>
+        </div>
+      </section>
+    </div>
+
+    <div class="footer">Footer sticky</div>
+  </div>
+
+  <script>
+      function openNav() {
+          document.getElementById("mySidenav").style.width = "250px";
+      }
+      
+      function closeNav() {
+          document.getElementById("mySidenav").style.width = "0";
+      }
+  </script>
+
+</body>
+
+</html>
