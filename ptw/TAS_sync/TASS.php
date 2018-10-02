@@ -27,7 +27,7 @@ function replicateTimeTable($period, $sem, $room, $subject) {
     $delCondition="";
 
     echo "TASSynchronizer.replicateTimeTable(): Collecting Room Information, sucessful = ";
-    $r = getRemoteRoomList();
+    $r = getRemoteRoomList(); // TODO: Replace with testing function first
     echo $r . "\n";
 
     echo "TASSynchronizer.replicateTimeTable(): Collecting TAS Basic Information, sucessful = ";
@@ -51,7 +51,80 @@ function replicateTimeTable($period, $sem, $room, $subject) {
         echo "Replicating Assignment TimeTable having condition {$condition}";
         echo "\nTASSynchronizer.replicateTimeTable() : Connecting to DB {$configs['db_server']} by {$configs['username']}\n";
 
-         // TODO: TAS Oracle connection
+        // TAS Oracle connection
+        $conn = oci_connect($configs->TAS_username, $configs->TAS_password, $configs->TAS_db);
+        if (!$conn) die("Connection failed: " . oci_error());
+
+        $query = "select JobNo,subject_code,shour,ehour,wday,venue from assignment_timetable a where {$condition}" . 
+            " group by JobNo,subject_code,shour,ehour,wday,venue" . 
+            " order by a.subject_code ";
+        $stid = oci_parse($conn, $query);
+        oci_execute($stid);
+
+        // Delete record from rbs
+        // $rbsconn = new mysqli($server, $username, $password);
+        // if ($rbsconn->connect_error) {
+        //     die("Connection failed: " . $rbsconn->connect_error);
+        // }
+        // echo "Removing record from RBS before replicatiion for condition {$delCondition} .... ";
+        
+        // $sql = "delete from mrbs_entry where {$delCondition}";
+        // if ($rbsconn->query($sql) === true) {
+        //     echo "Record deleted successfully";
+        // } else {
+        //     echo "Error deleting record: " . $rbsconn->error;
+        // }
+
+        // $sql = "delete from mrbs_repeat where {$delCondition}";
+        // if ($rbsconn->query($sql) === true) {
+        //     echo "Record deleted successfully";
+        // } else {
+        //     echo "Error deleting record: " . $rbsconn->error;
+        // }
+        // echo "Done!\n";
+
+        $count = 0;
+        $done = 0;
+
+        while ($row = oci_fetch_array($stid, OCI_RETURN_NULLS+OCI_ASSOC)) {
+            $ht = array();
+            $count++;
+
+            $jobno = $row["jobno"];
+            $subjectCode = $row["subject_code"];
+            $start_seconds = convertToSeconds($row["shour"]);
+            $end_seconds = convertToSeconds($row["ehour"]);
+            $rep_day= convertToDayOfWeek($row["wday"]);
+            $venue = $row["venue"];
+
+            echo "TASSynchronizer.replicateTimeTable(): Processing {$subjectCode} on {$wday} {$shour}-{$ehour} at {$venue}";
+                        
+            $subjectTitle = "";
+            try {
+                GLOBAL $subjectHT;
+                $subjectTitle = $subjectHT[$subjectCode]["subject_title"];
+            } catch (Exception $e) {
+                echo "*** ERROR: TASSynchronizer.replicateTimeTable(): subject title of {$subjectCode} not available";
+            }
+
+            $sname = "";
+            $description = "";
+            try {
+                GLOBAL $teachingRequirementHT;
+                // $sname = $teachingRequirementHT[$jobno]->getStaffNameList(); // TODO: Get staff name list
+                $description = "{$subjectTitle} ({$sname})";
+                echo "TASSynchronizer.replicateTimeTable():  by {$sname}";
+            } catch (Exception $e) {
+                echo "*** ERROR: TASSynchronizer.replicateTimeTable(): Teaching Requirement of {$jobno} subject code {$subjectCode} not available";
+            }
+
+            // TODO: To be continued
+        }
+
+        
+
+
+        
         
     } catch (Exception $e) {
         echo $e->getMessage();
@@ -89,6 +162,7 @@ function getRemoteRoomList() {
     return $r;
 }
 
+// TODO: need test
 function getTASInfo($period) {
     GLOBAL $staffHT, $subjectHT, $teachingRequirementHT;
     $configs = init();
