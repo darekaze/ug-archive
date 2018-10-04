@@ -26,8 +26,7 @@ JAHJA Darwin, 16094501d
 
 ![img4](cap4.PNG)
 
-2. Open the 'arm-board/linux-3.0.8/drivers/char/Makefile'
-and add the following line at the end.
+2. Open the 'arm-board/linux-3.0.8/drivers/char/Makefile' and add the following line at the end.
 
 ```tex
 obj-$(CONFIG_COMP3438_LAB4) += comp3438_lab4.o
@@ -35,8 +34,7 @@ obj-$(CONFIG_COMP3438_LAB4) += comp3438_lab4.o
 
 ![img5](cap5.PNG)
 
-3. Open the "arm-board/linux-3.0.8/drivers/char/Kconfig"
-and add the following lines at the end before "endmenu".
+3. Open the "arm-board/linux-3.0.8/drivers/char/Kconfig" and add the following lines at the end before "endmenu".
 
 ```tex
 ...
@@ -73,8 +71,7 @@ make menuconfig
 
 ## Load the driver on the embedded board
 
-1. Open putty and mount "/home/comp3438/arm-board" to the
-embedded board. And dynamically load the driver in kernel.
+1. Open putty and mount "/home/comp3438/arm-board" to the embedded board. And dynamically load the driver in kernel.
 
 ```bash
 # Run in putty terminal
@@ -116,8 +113,7 @@ arm-linux-gnueabi-gcc -o comp3438_lab4_app comp3438_lab4_app.c
 
 ![img14](cap14.PNG)
 
-3. In putty terminal, go to "/mnt/nfs" and run the
-compiled file.
+3. In putty terminal, go to "/mnt/nfs" and run the compiled file.
 
 ```bash
 cd /mnt/nfs/
