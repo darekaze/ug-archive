@@ -1,91 +1,69 @@
 <?php
-$roomToID = array();
-$idToRoom = array();
-$roomToAreaID = array();
-
-$subjectHT = array();
-$staffHT = array();
-$teachingRequirementHT = array();
-
-$fieldList = array(
-    "name","description",
-    "start_day","start_month","start_year","start_seconds",
-    "end_day","end_month","end_year","end_seconds",
-    "area","rooms[]","type","confirmed","private",
-    "f_tas_import","f_tas_period","f_tas_sem","f_tas_user_comp_acc","f_tas_subject_code",
-    "rep_type","rep_end_day","rep_end_month","rep_end_year","rep_day[]","rep_num_weeks",
-    "returl","create_by","rep_id","edit_type","f_tas_syndate"
-);
-
+// TAS Sync program
 /**
 * @throws Exception if operation fail
 */
-function replicateTimeTable($period, $sem, $room, $subject) {
-    $configs = init();
-    $rst = "";
-    $condition=""; 
-    $delCondition="";
+function replicateTimeTable($configs, $room, $subject) {
+    $roomToID = array();
+    $roomToAreaID = array();
 
     echo "TASSynchronizer.replicateTimeTable(): Collecting Room Information, sucessful = ";
-    $r = getRemoteRoomList(); // TODO: Replace with testing function first
+    $r = getRemoteRoomList($configs->RBS, $roomToID, $roomToAreaID); // Need rbs data
     echo $r . "\n";
 
+    // Get TAS Info
+    $staffHT = array();
+    $subjectHT = array();
+    $teachingRequirementHT = array();
+
     echo "TASSynchronizer.replicateTimeTable(): Collecting TAS Basic Information, sucessful = ";
-    $r = getTASInfo($configs->period);
+    $r = false;
+    try {
+        $conn = oci_connect($configs->TAS->username, $configs->TAS->password, $configs->TAS->db);
+        if (!$conn) die("Connection failed: " . oci_error());
+
+        getStaffHT($conn, $configs->period, $staffHT);
+        getSubjectHT($conn, $configs->period, $subjectHT);
+        getTeachingRequirementHT($conn, $configs->period, $staffHT, $teachingRequirementHT);
+        oci_close($conn);
+        $r = true;
+    } catch (Exception $e) {
+        echo $e->getMessage();
+    }		
     echo $r . "\n\n";
 
-    if ($condition === null) $condition = "";
-    $condition = "{$condition}a.Period='{$period}' and a.STerm<={$sem} and {$sem}<=a.ETerm"; 
-    $delCondition = "{$delCondition}tas_import=1 and tas_period='{$period}' and tas_sem='{$sem}'";
+    // Make conditions
+    $condition="";
+    $delCondition="";
     
+    $condition = "{$condition}a.Period='{$configs->period}' and a.STerm<={$configs->sem} and {$configs->sem}<=a.ETerm"; 
+    $delCondition = "{$delCondition}tas_import=1 and tas_period='{$configs->period}' and tas_sem='{$configs->sem}'";
     if ($room !== null) {
         $condition = "{$condition} and venue='{$room}'"; 
-        $delCondition += "{$delCondition} and room_id={$this->$roomToID['room']}";
+        $delCondition = "{$delCondition} and room_id={$roomToID['room']}";
     }
     if ($subject !== null) {
         $condition = "{$condition} and a.subject_code='{$subject}'"; 
-        $delCondition += "{$delCondition} and tas_subject_code='{$subject}'";
+        $delCondition = "{$delCondition} and tas_subject_code='{$subject}'";
     }
-
-    try {	
+    try {
         echo "Replicating Assignment TimeTable having condition {$condition}";
-        echo "\nTASSynchronizer.replicateTimeTable() : Connecting to DB {$configs['db_server']} by {$configs['username']}\n";
+        echo "\nTASSynchronizer.replicateTimeTable() : Connecting to DB {$configs->TAS->db} by {$configs->TAS->username}\n";
 
-        // TAS Oracle connection
-        $conn = oci_connect($configs->TAS_username, $configs->TAS_password, $configs->TAS_db);
+        $conn = oci_connect($configs->TAS->username, $configs->TAS->password, $configs->TAS->db);
         if (!$conn) die("Connection failed: " . oci_error());
 
         $query = "select JobNo,subject_code,shour,ehour,wday,venue from assignment_timetable a where {$condition}" . 
             " group by JobNo,subject_code,shour,ehour,wday,venue" . 
-            " order by a.subject_code ";
+            " order by a.subject_code";
         $stid = oci_parse($conn, $query);
-        oci_execute($stid);
-
-        // Delete record from rbs
-        // $rbsconn = new mysqli($server, $username, $password);
-        // if ($rbsconn->connect_error) {
-        //     die("Connection failed: " . $rbsconn->connect_error);
-        // }
-        // echo "Removing record from RBS before replicatiion for condition {$delCondition} .... ";
+        oci_execute($stid) ? delRepetition($configs->RBS, $delCondition) : null; // Need rbs data
         
-        // $sql = "delete from mrbs_entry where {$delCondition}";
-        // if ($rbsconn->query($sql) === true) {
-        //     echo "Record deleted successfully";
-        // } else {
-        //     echo "Error deleting record: " . $rbsconn->error;
-        // }
-
-        // $sql = "delete from mrbs_repeat where {$delCondition}";
-        // if ($rbsconn->query($sql) === true) {
-        //     echo "Record deleted successfully";
-        // } else {
-        //     echo "Error deleting record: " . $rbsconn->error;
-        // }
-        // echo "Done!\n";
-
+        // TAS Synchronizer start replicate time table
         $count = 0;
         $done = 0;
 
+        // TODO: 10/6 continue from here
         while ($row = oci_fetch_array($stid, OCI_RETURN_NULLS+OCI_ASSOC)) {
             $ht = array();
             $count++;
@@ -120,11 +98,6 @@ function replicateTimeTable($period, $sem, $room, $subject) {
 
             // TODO: To be continued
         }
-
-        
-
-
-        
         
     } catch (Exception $e) {
         echo $e->getMessage();
@@ -132,12 +105,72 @@ function replicateTimeTable($period, $sem, $room, $subject) {
     return $r;	
 }
 
-function getRemoteRoomList() {
-    GLOBAL $roomToID, $idToRoom, $roomToAreaID;
-    $configs = init();
+function getStaffHT($conn, $period, &$staffHT) {
+    $query = "select sid,sname from staff where period='{$period}'";
+    $stid = oci_parse($conn, $query);
+    oci_execute($stid);
+    while ($row = oci_fetch_array($stid, OCI_RETURN_NULLS+OCI_ASSOC)) {
+        $sid = $row["sid"];
+        $sname = $row["sname"];
+        $staff = array($sid,$sname); // Staff
+
+        $staffHT[$sid] = $staff;
+    }
+    oci_free_statement($stid);
+}
+
+function getSubjectHT($conn, $period, &$subjectHT) {
+    $query = "select subject_code,subject_title from subject where period='{$period}'";
+    $stid = oci_parse($conn, $query);
+    oci_execute($stid);
+    while ($row = oci_fetch_array($stid, OCI_RETURN_NULLS+OCI_ASSOC)) {
+        $code = $row["subject_code"];
+        $title = $row["subject_title"];
+        $subject = array($code,$title);
+        
+        $subjectHT[$code] = $subject;
+    }
+    oci_free_statement($stid);
+}
+
+function getTeachingRequirementHT($conn, $period, $staffHT, &$teachingRequirementHT) {
+    $query = "select jobno,subject_code,c_code,a_code from Teaching_Requirement where period='{$period}'";
+    $stid = oci_parse($conn, $query);
+    oci_execute($stid);
+    while ($row = oci_fetch_array($stid, OCI_RETURN_NULLS+OCI_ASSOC)) {
+        $jobno = $row["jobno"];
+        $s_code = $row["subject_code"];
+        $c_code = $row["c_code"];
+        $a_code = $row["a_code"];
+        $teachingRequirement = array($jobno,$s_code,$c_code,$a_code);
+        $teachingRequirement["staffHT"] = getTeachingRequirementStaff($conn,$staffHT,$period,$jobno);
+
+        $teachingRequirementHT[$jobno] = $teachingRequirement;
+    }
+    oci_free_statement($stid);
+}
+
+function getTeachingRequirementStaff($conn, &$staffHT, $period, $jobno) {
+    $sHT = array();
+    try {
+        $query = "select sid from assignment_timetable where jobno='{$jobno}' and period='{$period}'";
+        $stid = oci_parse($conn, $query);
+        oci_execute($stid);
+        while ($row = oci_fetch_array($stid, OCI_RETURN_NULLS+OCI_ASSOC)) {
+            $sid = $row["sid"];
+            $sHT[$sid] = $staffHT[$sid];
+        }
+        oci_free_statement($stid);
+    } catch (Exception $e) {
+        echo $e->getMessage();
+    }
+    return $sHT;
+}
+
+function getRemoteRoomList($rbs, &$roomToID, &$roomToAreaID) {
     $r = false;
     try {
-        $rbsconn = new mysqli($configs->rbs_db, $configs->rbs_username, $configs->rbs_password);
+        $rbsconn = new mysqli($rbs->db, $rbs->username, $rbs->password);
         if ($rbsconn->connect_error) {
             throw new Exception("Connection failed: " . $rbsconn->connect_error);
         }
@@ -150,7 +183,6 @@ function getRemoteRoomList() {
                 $area_id = $row["area_id"];
 
                 $roomToID[$room] = $id;
-                $idToRoom[$id] = $room;
                 $roomToAreaID[$room] = $area_id;
             }
         }
@@ -158,88 +190,33 @@ function getRemoteRoomList() {
         $r = true;           		
     } catch (Exception $e) {
         echo $e->getMessage();
-    }	
+    }
     return $r;
 }
 
-// TODO: need test
-function getTASInfo($period) {
-    GLOBAL $staffHT, $subjectHT, $teachingRequirementHT;
-    $configs = init();
-    $r = false;
-
-    try {
-        $conn = oci_connect($configs->TAS_username, $configs->TAS_password, $configs->TAS_db);
-        if (!$conn) die("Connection failed: " . oci_error());
-
-        // Get Staff hashtable
-        $query = "select sid,sname from staff where period='{$period}'";
-        $stid = oci_parse($conn, $query);
-        oci_execute($stid);
-        while ($row = oci_fetch_array($stid, OCI_RETURN_NULLS+OCI_ASSOC)) {
-            $sid = $row["sid"];
-            $sname = $row["sname"];
-            $staff = array($sid,$sname); // Staff
-
-            $staffHT[$sid] = $staff;
-        }
-        oci_free_statement($stid);
-        
-        // Get Subject hashtable
-        $query = "select subject_code,subject_title from subject where period='{$period}'";
-        $stid = oci_parse($conn, $query);
-        oci_execute($stid);
-        while ($row = oci_fetch_array($stid, OCI_RETURN_NULLS+OCI_ASSOC)) {
-            $code = $row["subject_code"];
-            $title = $row["subject_title"];
-            $subject = array($code,$title);
-            
-            $subjectHT[$code] = $subject;
-        }
-        oci_free_statement($stid);
-
-        // Get Teaching requirement hashtable
-        $query = "select jobno,subject_code,c_code,a_code from Teaching_Requirement where period='{$period}'";
-        $stid = oci_parse($conn, $query);
-        oci_execute($stid);
-        while ($row = oci_fetch_array($stid, OCI_RETURN_NULLS+OCI_ASSOC)) {
-            $jobno = $row["jobno"];
-            $s_code = $row["subject_code"];
-            $c_code = $row["c_code"];
-            $a_code = $row["a_code"];
-            $teachingRequirement = array($jobno,$s_code,$c_code,$a_code);
-            $teachingRequirement["staffHT"] = getTeachingRequirementStaff($jobno,$period,$conn);
-
-            $teachingRequirementHT[$jobno] = $teachingRequirement;
-        }
-        oci_free_statement($stid);
-        oci_close($conn);
-        $r = true; 
-
-    } catch (Exception $e) {
-        echo $e->getMessage();
-    }	
-    return $r;	
-}
-
-function getTeachingRequirementStaff($jobno, $period, $conn) {
-    GLOBAL $staffHT;
-    $configs = init();
-    $sHT = array();
-    try {
-        $query = "select sid from assignment_timetable where jobno='{$jobno}' and period='{$period}'";
-        $stid = oci_parse($conn, $query);
-        oci_execute($stid);
-        while ($row = oci_fetch_array($stid, OCI_RETURN_NULLS+OCI_ASSOC)) {
-            $sid = $row["sid"];
-            $sHT[$sid] = $staffHT[$sid];
-        }
-        oci_free_statement($stid);
-
-    } catch (Exception $e) {
-        echo $e->getMessage();
+function delRepetition($rbs, $delCondition) {
+    $rbsconn = new mysqli($rbs->db, $rbs->username, $rbs->password);
+    if ($rbsconn->connect_error) {
+        die("Connection failed: " . $rbsconn->connect_error);
     }
-    return $sHT;
+    echo "Removing record from RBS before replicatiion for condition {$delCondition} .... ";
+    
+    $sql = "delete from mrbs_entry where {$delCondition}";
+    if ($rbsconn->query($sql) === true) {
+        echo "Record deleted successfully";
+    } else {
+        echo "Error deleting record: " . $rbsconn->error;
+    }
+
+    $sql = "delete from mrbs_repeat where {$delCondition}";
+    if ($rbsconn->query($sql) === true) {
+        echo "Record deleted successfully";
+    } else {
+        echo "Error deleting record: " . $rbsconn->error;
+    }
+    $rbsconn->commit();  
+    $rbsconn->close(); 
+    echo "Done!\n";
 }
 
 function callInsertBookingURL($ht) {
@@ -248,7 +225,7 @@ function callInsertBookingURL($ht) {
 }
 
 
-// ---------------Short function (without init)-----------//
+// ---------------util function--------------//
 
 function convertToSeconds($t) {
     return (strtotime($t) - strtotime('TODAY'));
@@ -264,16 +241,14 @@ function getCurrentDateFormatted() {
     return "{$date->format('Y-m-d h:i:s')}";
 }
 
-function getNameValuePair($ht) {
-    GLOBAL $fieldList;
+function getNameValuePair($fieldList ,$ht) {
     $nvps = array();
     foreach($fieldList as $field)
         $nvps[$field] = $ht[$field];
     return $nvps;
 }
 
-function getQueryString($ht) {
-    GLOBAL $fieldList;
+function getQueryString($fieldList, $ht) {
     $r = "";
     foreach($fieldList as $field)
         $r = "{$field}={$ht[$field]}&";
@@ -297,64 +272,48 @@ function getTestHT() {
 
 }
 
-function testRemoteConn() {
-    $configs = init();
-    $r = "";
+function testRemoteConn($rbs) {
     try {
-        $rbsconn = new mysqli($configs->rbs_db, $configs->rbs_username, $configs->rbs_password); // rbsUsername,rbsPassword
+        $rbsconn = new mysqli($rbs->db, $rbs->username, $rbs->password);
         if ($rbsconn->connect_error) {
             throw new Exception("Connection failed: " . $rbsconn->connect_error);
         }
         $rbsconn->close();
-        $r = "TASSynchronizer.testRemoteConn : Finished";
+        echo "TASSynchronizer.testRemoteConn : Finished\n";
 
     } catch (Exception $e) {
-        echo "TASSynchronizer.testRemoteConn : Error while creating ORA-Conn Object";
-        $r = $e->getMessage();
-        echo $r;	
+        echo "TASSynchronizer.testRemoteConn : Error while creating ORA-Conn Object\n";
+        echo $e->getMessage();	
     }
-    return $r;
 }
 
-function testLocalConn() {
-    $configs = init();
-    $r = "";
-
+function testLocalConn($tas) {
     try {
         echo "TASSynchronizer.testLocalConn : Using Oracle";
-        echo "TASSynchronizer.testLocalConn : Connecting to {$configs->TAS_db} by {$configs->TAS_username} with password length " . strlen($configs->TAS_password);
+        echo "TASSynchronizer.testLocalConn : Connecting to {$tas->db} by {$tas->username} with password length " . strlen($tas->password);
         
-        $conn = oci_connect($configs->TAS_username, $configs->TAS_password, $configs->TAS_db);
+        $conn = oci_connect($tas->username, $tas->password, $tas->db);
         if (!$conn) {
             throw new Exception("Connection failed: " . oci_error());
         }
         oci_close($conn);
-        $r = "TASSynchronizer.testLocalConn : Finished";
+        echo "TASSynchronizer.testLocalConn : Finished\n";
 
     } catch (Exception $e) {
-        echo "TASSynchronizer.testLocalConn : Error while creating ORA-Conn Object";
-        $r = $e->getMessage();
-        echo $r;
+        echo "TASSynchronizer.testLocalConn : Error while creating ORA-Conn Object\n";
+        echo $e->getMessage();
     }
-    return $r;
 }
 
 //////////////////////////////
 /**
 * @throws Exception if operation fail
 */
-function init() {
-    return include('config.php');
-}
-
-/**
-* @throws Exception if operation fail
-*/
 function start() {
-    $configs = init();
+    $configs = include('config.php');
     echo "Replicating TAS Timetable\n";	
-    // replicateTimeTable($configs->period, $configs->sem, null, null);
-    testLocalConn();
+    // replicateTimeTable($configs, null, null);
+    testLocalConn($configs->TAS);
 }
 
 start();
