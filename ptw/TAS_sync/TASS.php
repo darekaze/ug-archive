@@ -66,43 +66,81 @@ function replicateTimeTable($configs, $room, $subject) {
         $count = 0;
         $done = 0;
 
-        /*
         // TODO: 10/6 continue from here
         while ($row = oci_fetch_array($stid, OCI_RETURN_NULLS+OCI_ASSOC)) {
             $ht = array();
             $count++;
 
-            $jobno = $row["jobno"];
-            $subjectCode = $row["subject_code"];
-            $start_seconds = convertToSeconds($row["shour"]);
-            $end_seconds = convertToSeconds($row["ehour"]);
-            $rep_day= convertToDayOfWeek($row["wday"]);
-            $venue = $row["venue"];
+            $jobno = $row["JOBNO"];
+            $subjectCode = $row["SUBJECT_CODE"];
+            $start_seconds = convertToSeconds($row["SHOUR"]);
+            $end_seconds = convertToSeconds($row["EHOUR"]);
+            $rep_day = convertToDayOfWeek($row["WDAY"]);
+            $venue = $row["VENUE"];
 
-            echo "TASSynchronizer.replicateTimeTable(): Processing {$subjectCode} on {$wday} {$shour}-{$ehour} at {$venue}";
-                        
-            $subjectTitle = "";
-            try {
-                GLOBAL $subjectHT;
-                $subjectTitle = $subjectHT[$subjectCode]["subject_title"];
-            } catch (Exception $e) {
-                echo "*** ERROR: TASSynchronizer.replicateTimeTable(): subject title of {$subjectCode} not available";
+            // If error, try changing back to use exception
+            echo "TASSynchronizer.replicateTimeTable(): Processing {$subjectCode} on {$rep_day} {$start_seconds}-{$end_seconds} at {$venue}";
+            $subjectTitle = $subjectHT[$subjectCode]["SUBJECT_TITLE"];
+            if($subjectTitle == null || $subjectTitle == "") {
+                throw new Exception("*** ERROR: TASSynchronizer.replicateTimeTable(): subject title of {$subjectCode} not available");
             }
 
-            $sname = "";
-            $description = "";
-            try {
-                GLOBAL $teachingRequirementHT;
-                // $sname = $teachingRequirementHT[$jobno]->getStaffNameList(); // TODO: Get staff name list
-                $description = "{$subjectTitle} ({$sname})";
-                echo "TASSynchronizer.replicateTimeTable():  by {$sname}";
-            } catch (Exception $e) {
-                echo "*** ERROR: TASSynchronizer.replicateTimeTable(): Teaching Requirement of {$jobno} subject code {$subjectCode} not available";
+            $sNameList = getStaffNameList($teachingRequirementHT[$jobno]["staffHT"]); // return StaffNameList in string
+            $description = "{$subjectTitle} ({$sNameList})";
+            echo "TASSynchronizer.replicateTimeTable(): by {$sNameList}";
+            if($sNameList == null || $sNameList == "") {
+                throw new Exception("*** ERROR: TASSynchronizer.replicateTimeTable(): Teaching Requirement of {$jobno} subject code {$subjectCode} not available");
             }
 
-            // TODO: To be continued
+            // TODO: Need test
+            if ($rep_day != "-1" && $roomToAreaID[$venue] !== null && $roomToID[$venue] !== null) {
+                $synDate = getCurrentDateFormatted();
+                $done++;
+                $ht = array(
+                    "name" => $subjectCode,
+                    "description" => $description,
+                    "start_day" => $configs->start_day,
+                    "start_month" => $configs->start_month,
+                    "start_year" => $configs->start_year,
+                    "start_seconds" => $start_seconds,
+                    "end_day" => $configs->start_day,
+                    "end_month" => $configs->start_month,
+                    "end_year" => $configs->start_year,
+                    "end_seconds" => $end_seconds,
+                    "area" => $roomToAreaID[$venue],
+                    "rooms[]" => $roomToID[$venue],
+                    "type" => "I",
+                    "confirmed" => "1",
+                    "private" => "0",
+                    "f_tas_import" => "1",					
+                    "f_tas_period" => $configs->period,
+                    "f_tas_sem" => $configs->sem,
+                    "f_tas_user_comp_acc" => "",
+                    "rep_type" => "2",
+                    "rep_end_day" => $configs->end_day,
+                    "rep_end_month" => $configs->end_month,
+                    "rep_end_year" => $configs->end_year,
+                    "rep_day[]" => $rep_day,
+                    "rep_num_weeks" => "",
+                    "returl" => "",
+                    "create_by" => "cspaulin",
+                    "rep_id" => "0",
+                    "edit_type" => "series",
+                    "f_tas_subject_code" => $subjectCode,
+                    "f_tas_syndate" => $synDate
+                );
+
+                callInsertBookingURL($ht);
+            } else {
+                echo "Not replicating {$subjectCode} by {$sname} {$wday} {$shour}-{$ehour} at {$venue}\n";
+            }
         }
-        */  
+
+        echo "Count Matching condition = {$count}, done = {$done}\n";
+        oci_close($conn);
+
+        echo "TASSynchronizer.replicateTimeTable() : Finished\n\n";
+
     } catch (Exception $e) {
         echo $e->getMessage();
     } 	
@@ -223,9 +261,52 @@ function delRepetition($rbs, $delCondition) {
     echo "Done!\n";
 }
 
-function callInsertBookingURL($ht) {
-    // TODO: ..
-    $configs = init();
+// Do mock test
+/**
+ * @throws Exception if operation fail
+ */
+function callInsertBookingURL($ht, $loginURL, $rbsURL) {
+    // Get login form
+    $nvps = array(
+        'NewUserName' => '<username>',
+        'NewUserPassword' => '<password>',
+        'returl' => '',
+        'TargetURL' => 'admin.php?',
+        'Action' => 'SetName',
+        'submit' => ' Log in '
+    );
+    $options = array(
+        'http' => array(
+            'header'  => "Content-type: application/x-www-form-urlencoded\r\n",
+            'method'  => 'POST',
+            'content' => http_build_query($nvps)
+        )
+    );
+    $context = stream_context_create($options);
+    $result = file_get_contents($loginURL, false, $context);
+    if ($result === false) { 
+        throw new Exception("Error occur");
+    }
+    echo "Login form get: \n";
+    var_dump($result);
+
+    // Post to rbs
+    $nvps = getNameValuePair($ht);
+    $options = array(
+        'http' => array(
+            'header'  => "Content-type: application/x-www-form-urlencoded\r\n",
+            'method'  => 'POST',
+            'content' => http_build_query($nvps)
+        )
+    );
+    $context  = stream_context_create($options);
+    $result = file_get_contents($rbsURL, false, $context);
+    if ($result === false) { 
+        throw new Exception("Error occur");
+    }
+    
+    echo "Send Data form get: \n";
+    var_dump($result);
 }
 
 
@@ -259,6 +340,14 @@ function getQueryString($fieldList, $ht) {
     return $r;
 }
 
+function getStaffNameList($staffHT) {
+    $str = "";
+    foreach($staffHT as $sid => $staff) {
+        $str = $str . " " . $staff[1];
+    }
+    return $str;
+}
+
 function displayResponseContent($entity) {
     echo "Writing Content of Response" . html_entity_decode($entity);
 }
@@ -270,11 +359,7 @@ function displayErrorMessage($entity) { // [HttpEntity entity]
     echo $display[0];
 }
 
-//-----------Test functions------------//
-// TODO: Finish test functions
-function getTestHT() {
-
-}
+//-----------Test connection-----------//
 
 function testRemoteConn($rbs) {
     try {
@@ -313,7 +398,7 @@ function testLocalConn($tas) {
     }
 }
 
-//////////////////////////////
+//---------------Main------------------//
 /**
 * @throws Exception if operation fail
 */

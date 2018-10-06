@@ -27,7 +27,7 @@ return (object) array(
 
     // TAS Sync Configuration
     'period' => '2017-2018',
-    'sem' => '2',
+    'sem' => '1',
     'start_day'=>'11',
     'start_month'=>'1',
     'start_year'=>'2017',
