@@ -15,7 +15,7 @@ return (object) array(
     ),
 
     // Field List for Hash Table
-    'fieldList' = array(
+    'fieldList' => array(
         "name","description",
         "start_day","start_month","start_year","start_seconds",
         "end_day","end_month","end_year","end_seconds",
