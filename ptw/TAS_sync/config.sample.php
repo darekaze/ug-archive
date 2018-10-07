@@ -26,13 +26,13 @@ return (object) array(
     ),
 
     // TAS Sync Configuration
-    'period' => '2017-2018',
+    'period' => '2018-2019',
     'sem' => '1',
     'start_day'=>'11',
     'start_month'=>'1',
-    'start_year'=>'2017',
+    'start_year'=>'2018',
     'end_day'=>'16',
     'end_month'=>'4',
-    'end_year'=>'2018'
+    'end_year'=>'2019'
 );
 ?>

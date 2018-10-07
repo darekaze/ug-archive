@@ -7,11 +7,10 @@ function replicateTimeTable($configs, $room, $subject) {
     $roomToID = array();
     $roomToAreaID = array();
 
-    /* // This part Need rbs data
+    // This part Need rbs data
     echo "TASSynchronizer.replicateTimeTable(): Collecting Room Information, sucessful = ";
     $r = getRemoteRoomList($configs->RBS, $roomToID, $roomToAreaID); 
     echo $r . "\n";
-    */
 
     // Get TAS Info
     $staffHT = array();
@@ -42,32 +41,31 @@ function replicateTimeTable($configs, $room, $subject) {
     $delCondition = "{$delCondition}tas_import=1 and tas_period='{$configs->period}' and tas_sem='{$configs->sem}'";
     if ($room !== null) {
         $condition = "{$condition} and venue='{$room}'"; 
-        // $delCondition = "{$delCondition} and room_id={$roomToID['room']}"; // Need data from rbs
+        $delCondition = "{$delCondition} and room_id={$roomToID['room']}"; // Need data from rbs
     }
     if ($subject !== null) {
         $condition = "{$condition} and a.subject_code='{$subject}'"; 
         $delCondition = "{$delCondition} and tas_subject_code='{$subject}'";
     }
 
-    try {
-        echo "Replicating Assignment TimeTable having condition {$condition}";
-        echo "\nTASSynchronizer.replicateTimeTable() : Connecting to DB {$configs->TAS->db} by {$configs->TAS->username}\n";
+    echo "Replicating Assignment TimeTable having condition {$condition}";
+    echo "\nTASSynchronizer.replicateTimeTable() : Connecting to DB {$configs->TAS->db} by {$configs->TAS->username}\n";
 
-        $conn = oci_connect($configs->TAS->username, $configs->TAS->password, $configs->TAS->db);
-        if (!$conn) die("Connection failed: " . oci_error());
+    $conn = oci_connect($configs->TAS->username, $configs->TAS->password, $configs->TAS->db);
+    if (!$conn) die("Connection failed: " . oci_error());
 
-        $query = "select JobNo,subject_code,shour,ehour,wday,venue from assignment_timetable a where {$condition}" . 
-            " group by JobNo,subject_code,shour,ehour,wday,venue" . 
-            " order by a.subject_code";
-        $stid = oci_parse($conn, $query);
-        // oci_execute($stid) ? delRepetition($configs->RBS, $delCondition) : null; // Need rbs data
+    $query = "select JobNo,subject_code,shour,ehour,wday,venue from assignment_timetable a where {$condition}" . 
+        " group by JobNo,subject_code,shour,ehour,wday,venue" . 
+        " order by a.subject_code";
+    $stid = oci_parse($conn, $query);
+    oci_execute($stid) ? delRepetition($configs->RBS, $delCondition) : null; // Need rbs data
         
-        // TAS Synchronizer start replicate time table
-        $count = 0;
-        $done = 0;
+    // TAS Synchronizer start replicate time table
+    $count = 0;
+    $done = 0;
 
-        // TODO: 10/6 continue from here
-        while ($row = oci_fetch_array($stid, OCI_RETURN_NULLS+OCI_ASSOC)) {
+    while ($row = oci_fetch_array($stid, OCI_RETURN_NULLS+OCI_ASSOC)) {
+        try {
             $ht = array();
             $count++;
 
@@ -78,7 +76,6 @@ function replicateTimeTable($configs, $room, $subject) {
             $rep_day = convertToDayOfWeek($row["WDAY"]);
             $venue = $row["VENUE"];
 
-            // If error, try changing back to use exception
             echo "TASSynchronizer.replicateTimeTable(): Processing {$subjectCode} on {$rep_day} {$start_seconds}-{$end_seconds} at {$venue}";
             $subjectTitle = $subjectHT[$subjectCode]["SUBJECT_TITLE"];
             if($subjectTitle == null || $subjectTitle == "") {
@@ -86,13 +83,13 @@ function replicateTimeTable($configs, $room, $subject) {
             }
 
             $sNameList = getStaffNameList($teachingRequirementHT[$jobno]["staffHT"]); // return StaffNameList in string
-            $description = "{$subjectTitle} ({$sNameList})";
-            echo "TASSynchronizer.replicateTimeTable(): by {$sNameList}";
             if($sNameList == null || $sNameList == "") {
                 throw new Exception("*** ERROR: TASSynchronizer.replicateTimeTable(): Teaching Requirement of {$jobno} subject code {$subjectCode} not available");
             }
+            $description = "{$subjectTitle} ({$sNameList})";
+            echo "TASSynchronizer.replicateTimeTable(): by {$sNameList}";
 
-            // TODO: Need test
+            // Need rbs data to test
             if ($rep_day != "-1" && $roomToAreaID[$venue] !== null && $roomToID[$venue] !== null) {
                 $synDate = getCurrentDateFormatted();
                 $done++;
@@ -134,16 +131,14 @@ function replicateTimeTable($configs, $room, $subject) {
             } else {
                 echo "Not replicating {$subjectCode} by {$sname} {$wday} {$shour}-{$ehour} at {$venue}\n";
             }
-        }
+        } catch (Exception $e) {
+            echo $e->getMessage();
+        }   
+    } 
+    echo "Count Matching condition = {$count}, done = {$done}\n";
+    oci_close($conn);
 
-        echo "Count Matching condition = {$count}, done = {$done}\n";
-        oci_close($conn);
-
-        echo "TASSynchronizer.replicateTimeTable() : Finished\n\n";
-
-    } catch (Exception $e) {
-        echo $e->getMessage();
-    } 	
+    echo "TASSynchronizer.replicateTimeTable() : Finished\n\n";
 }
 
 // Test: Done
@@ -261,8 +256,8 @@ function delRepetition($rbs, $delCondition) {
     echo "Done!\n";
 }
 
-// Do mock test
 /**
+ * Need data to test
  * @throws Exception if operation fail
  */
 function callInsertBookingURL($ht, $loginURL, $rbsURL) {
@@ -285,7 +280,7 @@ function callInsertBookingURL($ht, $loginURL, $rbsURL) {
     $context = stream_context_create($options);
     $result = file_get_contents($loginURL, false, $context);
     if ($result === false) { 
-        throw new Exception("Error occur");
+        throw new Exception("Error occur in login to rbs\n");
     }
     echo "Login form get: \n";
     var_dump($result);
@@ -302,7 +297,7 @@ function callInsertBookingURL($ht, $loginURL, $rbsURL) {
     $context  = stream_context_create($options);
     $result = file_get_contents($rbsURL, false, $context);
     if ($result === false) { 
-        throw new Exception("Error occur");
+        throw new Exception("Error occur in inserting data to rbs\n");
     }
     
     echo "Send Data form get: \n";
@@ -385,9 +380,7 @@ function testLocalConn($tas) {
         if (!$conn) {
             throw new Exception("Connection failed: " . oci_error() . "\n");
         }
-        
-        $period = '2018-2019';
-        // can add test case here
+        // Can add test case in here
 
         oci_close($conn);
         echo "TASSynchronizer.testLocalConn : Finished\n";
@@ -399,9 +392,7 @@ function testLocalConn($tas) {
 }
 
 //---------------Main------------------//
-/**
-* @throws Exception if operation fail
-*/
+
 function start() {
     $configs = include('config.php');
     echo "Replicating TAS Timetable\n";	
