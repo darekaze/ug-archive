@@ -5,7 +5,6 @@
   background-repeat: no-repeat;
   background-size: cover;
   position: relative;
-  z-index: -1;
 }
 
 .bg-text {
@@ -17,19 +16,19 @@
   color: #fff;
 }
 
-.bg-text button {
-  border: none;
-  border-radius: 5px;
-  outline: 0;
-  display: inline-block;
-  padding: 10px 25px;
-  color: black;
-  background-color: rgb(54, 253, 227);
+.bg-text a {
+  font-size: 1.1em;
   text-align: center;
+  color: #ff7be2;
+  background-color: #ffffff00;
+  border: 2px solid #ff7be2;
+  padding: 10px;
+  margin: 0 auto;
+  margin-top: 20px;
   cursor: pointer;
 }
 
-.bg-text button:hover {
-  background-color: #555;
-  color: white;
+.bg-text a:hover {
+  border: 2px solid #ffd1f9;
+  color: #ffd1f9;
 }
