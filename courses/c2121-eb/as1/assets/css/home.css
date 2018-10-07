@@ -1,0 +1,35 @@
+#bg-img {
+  background-image: linear-gradient(#00000080, #00000080), url(../images/background.jpg);
+  height: 100%;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  position: relative;
+  z-index: -1;
+}
+
+.bg-text {
+  text-align: left;
+  position: absolute;
+  top: 50%;
+  left: 10%;
+  transform: translate(0%, -62%);
+  color: #fff;
+}
+
+.bg-text button {
+  border: none;
+  border-radius: 5px;
+  outline: 0;
+  display: inline-block;
+  padding: 10px 25px;
+  color: black;
+  background-color: rgb(54, 253, 227);
+  text-align: center;
+  cursor: pointer;
+}
+
+.bg-text button:hover {
+  background-color: #555;
+  color: white;
+}
