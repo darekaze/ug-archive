@@ -19,9 +19,9 @@
 .bg-text a {
   font-size: 1.1em;
   text-align: center;
-  color: #ff7be2;
+  color: #fc4c4c;
   background-color: #ffffff00;
-  border: 2px solid #ff7be2;
+  border: 2px solid #fc4c4c;
   padding: 12px;
   margin: 0 auto;
   cursor: pointer;
@@ -29,6 +29,6 @@
 }
 
 .bg-text a:hover {
-  border: 2px solid #ffd1f9;
-  color: #ffd1f9;
+  border: 2px solid #ffa4a4;
+  color: #ffa4a4;
 }

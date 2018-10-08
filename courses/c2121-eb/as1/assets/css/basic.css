@@ -20,6 +20,16 @@ h1.lg-heading,
 h2.lg-heading,
 h3.lg-heading {
   font-size: 6rem;
+  line-height: 1;
+  padding-bottom: 9px;
+}
+
+h1.md-heading,
+h2.md-heading,
+h3.md-heading {
+  font-size: 4rem;
+  line-height: 1;
+  padding-bottom: 6px;
 }
 
 h1.sm-heading,
@@ -31,6 +41,10 @@ h3.sm-heading {
 }
 
 a {
-  color: #fff;
+  color: #f16262;
   text-decoration: none;
+}
+
+p {
+  margin: 30px 0;
 }

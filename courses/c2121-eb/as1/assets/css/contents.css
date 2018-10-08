@@ -1,2 +1,27 @@
+#hd {
+  height: 52%;
+  min-height: 300px;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  position: relative;
+  /* background-attachment: fixed; */
+}
 
+.hd-text {
+  text-align: left;
+  position: absolute;
+  top: 74%;
+  left: 12%;
+  transform: translate(0%, -50%);
+  color: #fff;
+}
+
+article {
+  font-size: 20px;
+  max-width: 1250px;
+  padding: 30px 60px;
+  margin: 0 auto;
+  justify-content: center;
+}
 
