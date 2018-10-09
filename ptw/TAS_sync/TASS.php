@@ -9,7 +9,7 @@ function replicateTimeTable($configs, $room, $subject) {
 
     // This part Need rbs data
     echo "TASSynchronizer.replicateTimeTable(): Collecting Room Information, sucessful = ";
-    $r = getRemoteRoomList($configs->RBS, $roomToID, $roomToAreaID); 
+    $r = getRemoteRoomList($configs->RBS, $roomToID, $roomToAreaID);
     echo $r . "\n";
 
     // Get TAS Info
@@ -58,7 +58,8 @@ function replicateTimeTable($configs, $room, $subject) {
         " group by JobNo,subject_code,shour,ehour,wday,venue" . 
         " order by a.subject_code";
     $stid = oci_parse($conn, $query);
-    oci_execute($stid) ? delRepetition($configs->RBS, $delCondition) : null; // Need rbs data
+    $r = oci_execute($stid);
+    // $r ? delRepetition($configs->RBS, $delCondition) : null; // Need rbs data
         
     // TAS Synchronizer start replicate time table
     $count = 0;
