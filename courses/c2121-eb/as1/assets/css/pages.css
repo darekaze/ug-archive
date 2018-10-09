@@ -5,7 +5,6 @@
   background-repeat: no-repeat;
   background-size: cover;
   position: relative;
-  /* background-attachment: fixed; */
 }
 
 .hd-text {
@@ -22,6 +21,5 @@ article {
   max-width: 1250px;
   padding: 30px 60px;
   margin: 0 auto;
-  justify-content: center;
 }
 
