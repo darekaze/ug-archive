@@ -77,15 +77,15 @@ function replicateTimeTable($configs, $room, $subject) {
             $venue = $row["VENUE"];
 
             echo "TASSynchronizer.replicateTimeTable(): Processing {$subjectCode} on {$rep_day} {$start_seconds}-{$end_seconds} at {$venue}";
-            $subjectTitle = $subjectHT[$subjectCode]["SUBJECT_TITLE"];
-            if($subjectTitle == null || $subjectTitle == "") {
+            if($subjectHT[$subjectCode]["SUBJECT_TITLE"] === null || $subjectHT[$subjectCode]["SUBJECT_TITLE"] === "") {
                 throw new Exception("*** ERROR: TASSynchronizer.replicateTimeTable(): subject title of {$subjectCode} not available");
             }
+            $subjectTitle = $subjectHT[$subjectCode]["SUBJECT_TITLE"];
 
-            $sNameList = getStaffNameList($teachingRequirementHT[$jobno]["staffHT"]); // return StaffNameList in string
-            if($sNameList == null || $sNameList == "") {
+            if($teachingRequirementHT[$jobno]["staffHT"] === null) {
                 throw new Exception("*** ERROR: TASSynchronizer.replicateTimeTable(): Teaching Requirement of {$jobno} subject code {$subjectCode} not available");
             }
+            $sNameList = getStaffNameList($teachingRequirementHT[$jobno]["staffHT"]); // return StaffNameList in string
             $description = "{$subjectTitle} ({$sNameList})";
             echo "TASSynchronizer.replicateTimeTable(): by {$sNameList}";
 
