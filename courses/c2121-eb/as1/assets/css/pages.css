@@ -107,6 +107,17 @@ input[type=submit]:hover {
   background-color: #fd7575;
 }
 
+/* Table */
+
+.tb {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tb td {
+  width: 50%;
+}
+
 /* For mobile view */
 @media (max-width: 740px) {
   section {
