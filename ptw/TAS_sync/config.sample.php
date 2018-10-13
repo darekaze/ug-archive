@@ -10,8 +10,10 @@ return (object) array(
         'db' => 'myxxx.comp.polyu.edu.hk/rbs',
         'username' => 'xxx',
         'password' => 'xxx',
-        'URL' => 'https://xxx.comp.polyu.edu.hk/edit_entry_handler.php',
-        'loginURL' => 'https://xxx.comp.polyu.edu.hk/admin.php'
+        'URL' => 'https://xxx.comp.polyu.edu.hk/Web/reservation.php',
+        'loginURL' => 'https://xxx.comp.polyu.edu.hk/Web/index.php',
+        'loginEmail' => 'admin',
+        'loginPassword' => 'password'
     ),
 
     // Field List for Hash Table

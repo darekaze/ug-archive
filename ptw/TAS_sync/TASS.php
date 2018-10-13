@@ -5,14 +5,14 @@
 */
 function replicateTimeTable($configs, $room, $subject) {
     $roomToID = array();
-    $roomToAreaID = array();
 
-    // This part Need rbs data
+// Get lab room list
     echo "TASSynchronizer.replicateTimeTable(): Collecting Room Information, sucessful = ";
-    $r = getRemoteRoomList($configs->RBS, $roomToID, $roomToAreaID);
+    // $r = getRemoteRoomList($configs->RBS, $roomToID); // need rbs account
+    $r = mockRoomList($roomToID);
     echo $r . "\n";
 
-    // Get TAS Info
+// Get TAS Info
     $staffHT = array();
     $subjectHT = array();
     $teachingRequirementHT = array();
@@ -33,7 +33,7 @@ function replicateTimeTable($configs, $room, $subject) {
     }		
     echo $r . "\n\n";
 
-    // Make conditions
+// Make conditions
     $condition="";
     $delCondition="";
     
@@ -48,6 +48,7 @@ function replicateTimeTable($configs, $room, $subject) {
         $delCondition = "{$delCondition} and tas_subject_code='{$subject}'";
     }
 
+// Get assignment timetable
     echo "Replicating Assignment TimeTable having condition {$condition}";
     echo "\nTASSynchronizer.replicateTimeTable() : Connecting to DB {$configs->TAS->db} by {$configs->TAS->username}\n";
 
@@ -59,17 +60,15 @@ function replicateTimeTable($configs, $room, $subject) {
         " order by a.subject_code";
     $stid = oci_parse($conn, $query);
     $r = oci_execute($stid);
-    // $r ? delRepetition($configs->RBS, $delCondition) : null; // Need rbs data
+    // $r ? delRepetition($configs->RBS, $delCondition) : null; // Need rbs account
         
-    // TAS Synchronizer start replicate time table
+// TAS Synchronizer start replicate time table
     $count = 0;
     $done = 0;
 
     while ($row = oci_fetch_array($stid, OCI_RETURN_NULLS+OCI_ASSOC)) {
         try {
-            $ht = array();
             $count++;
-
             $jobno = $row["JOBNO"];
             $subjectCode = $row["SUBJECT_CODE"];
             $start_seconds = convertToSeconds($row["SHOUR"]);
@@ -78,20 +77,19 @@ function replicateTimeTable($configs, $room, $subject) {
             $venue = $row["VENUE"];
 
             echo "TASSynchronizer.replicateTimeTable(): Processing {$subjectCode} on {$rep_day} {$start_seconds}-{$end_seconds} at {$venue}";
-            if($subjectHT[$subjectCode]["SUBJECT_TITLE"] === null || $subjectHT[$subjectCode]["SUBJECT_TITLE"] === "") {
+            if(empty($subjectHT[$subjectCode]["SUBJECT_TITLE"])) {
                 throw new Exception("*** ERROR: TASSynchronizer.replicateTimeTable(): subject title of {$subjectCode} not available");
             }
             $subjectTitle = $subjectHT[$subjectCode]["SUBJECT_TITLE"];
 
-            if($teachingRequirementHT[$jobno]["staffHT"] === null) {
+            if(empty($teachingRequirementHT[$jobno]["staffHT"])) {
                 throw new Exception("*** ERROR: TASSynchronizer.replicateTimeTable(): Teaching Requirement of {$jobno} subject code {$subjectCode} not available");
             }
             $sNameList = getStaffNameList($teachingRequirementHT[$jobno]["staffHT"]); // return StaffNameList in string
             $description = "{$subjectTitle} ({$sNameList})";
             echo "TASSynchronizer.replicateTimeTable(): by {$sNameList}";
 
-            // Need rbs data to test
-            if ($rep_day != "-1" && $roomToAreaID[$venue] !== null && $roomToID[$venue] !== null) {
+            if ($rep_day != "-1" && isset($roomToID[$venue])) {
                 $synDate = getCurrentDateFormatted();
                 $done++;
                 $ht = array(
@@ -105,7 +103,6 @@ function replicateTimeTable($configs, $room, $subject) {
                     "end_month" => $configs->start_month,
                     "end_year" => $configs->start_year,
                     "end_seconds" => $end_seconds,
-                    "area" => $roomToAreaID[$venue],
                     "rooms[]" => $roomToID[$venue],
                     "type" => "I",
                     "confirmed" => "1",
@@ -128,7 +125,7 @@ function replicateTimeTable($configs, $room, $subject) {
                     "f_tas_syndate" => $synDate
                 );
 
-                callInsertBookingURL($ht);
+                callInsertBookingURL($ht, $configs->RBS);
             } else {
                 echo "Not replicating {$subjectCode} by {$sname} {$wday} {$shour}-{$ehour} at {$venue}\n";
             }
@@ -205,23 +202,22 @@ function getTeachingRequirementStaff($conn, &$staffHT, $period, $jobno) {
     return $sHT;
 }
 
-function getRemoteRoomList($rbs, &$roomToID, &$roomToAreaID) {
+// TODO: require rbs mysql account to test
+function getRemoteRoomList($rbs, &$roomToID) {
     $r = false;
     try {
         $rbsconn = new mysqli($rbs->db, $rbs->username, $rbs->password);
         if ($rbsconn->connect_error) {
             throw new Exception("Connection failed: " . $rbsconn->connect_error);
         }
-        $sql = "select id,room_name,area_id from mrbs_room order by id";
+        $sql = "select * from mrbs_comp_lab;";
         $rs = $rbsconn->query($sql);
         if ($rs->num_rows > 0) {
             while ($row = $rs->fetch_assoc()) {
                 $id = $row["ID"];
                 $room = $row["ROOM_NAME"];
-                $area_id = $row["AREA_ID"];
 
                 $roomToID[$room] = $id;
-                $roomToAreaID[$room] = $area_id;
             }
         }
         $rbsconn->close();            
@@ -232,6 +228,7 @@ function getRemoteRoomList($rbs, &$roomToID, &$roomToAreaID) {
     return $r;
 }
 
+// TODO: require rbs mysql account to test
 function delRepetition($rbs, $delCondition) {
     $rbsconn = new mysqli($rbs->db, $rbs->username, $rbs->password);
     if ($rbsconn->connect_error) {
@@ -258,28 +255,29 @@ function delRepetition($rbs, $delCondition) {
 }
 
 /**
- * Need data to test
+ * TODO: Need Further test (Try curl)
  * @throws Exception if operation fail
  */
-function callInsertBookingURL($ht, $loginURL, $rbsURL) {
-    // Get login form
-    $nvps = array(
-        'NewUserName' => '<username>',
-        'NewUserPassword' => '<password>',
-        'returl' => '',
-        'TargetURL' => 'admin.php?',
-        'Action' => 'SetName',
-        'submit' => ' Log in '
+function callInsertBookingURL($ht, $rbs) {
+    // curl-less login method
+    $url = $rbs->loginURL;
+    $data = array(
+        'email' => $rbs->loginEmail,
+        'password' => $rbs->loginPassword,
+        'captcha' => '',
+        'login' => 'submit',
+        'resume' => '',
+        'language' => 'en_us'
     );
     $options = array(
         'http' => array(
             'header'  => "Content-type: application/x-www-form-urlencoded\r\n",
             'method'  => 'POST',
-            'content' => http_build_query($nvps)
+            'content' => http_build_query($data)
         )
     );
     $context = stream_context_create($options);
-    $result = file_get_contents($loginURL, false, $context);
+    $result = file_get_contents($url, false, $context);
     if ($result === false) { 
         throw new Exception("Error occur in login to rbs\n");
     }
@@ -287,22 +285,22 @@ function callInsertBookingURL($ht, $loginURL, $rbsURL) {
     var_dump($result);
 
     // Post to rbs
-    $nvps = getNameValuePair($ht);
-    $options = array(
-        'http' => array(
-            'header'  => "Content-type: application/x-www-form-urlencoded\r\n",
-            'method'  => 'POST',
-            'content' => http_build_query($nvps)
-        )
-    );
-    $context  = stream_context_create($options);
-    $result = file_get_contents($rbsURL, false, $context);
-    if ($result === false) { 
-        throw new Exception("Error occur in inserting data to rbs\n");
-    }
+    // $nvps = getNameValuePair($ht);
+    // $options = array(
+    //     'http' => array(
+    //         'header'  => "Content-type: application/x-www-form-urlencoded\r\n",
+    //         'method'  => 'POST',
+    //         'content' => http_build_query($nvps)
+    //     )
+    // );
+    // $context  = stream_context_create($options);
+    // $result = file_get_contents($rbsURL, false, $context);
+    // if ($result === false) { 
+    //     throw new Exception("Error occur in inserting data to rbs\n");
+    // }
     
-    echo "Send Data form get: \n";
-    var_dump($result);
+    // echo "Send Data form get: \n";
+    // var_dump($result);
 }
 
 
@@ -355,7 +353,26 @@ function displayErrorMessage($entity) { // [HttpEntity entity]
     echo $display[0];
 }
 
-//-----------Test connection-----------//
+//-----------Test connection & Mock function-----------//
+
+function mockRoomList(&$roomToID) {
+    $roomToID = array(
+        "QT402" => 1,
+        "QT417" => 2,
+        "QR511" => 3,
+        "PQ604A" => 4,
+        "PQ604B" => 5,
+        "PQ604C" => 6,
+        "PQ605" => 7,
+        "PQ606" => 8,
+        "PQ603" => 9,
+        "P503" => 10,
+        "P507" => 16,
+        "P505" => 15,
+        "P504" => 14
+    );
+    return true;
+}
 
 function testRemoteConn($rbs) {
     try {
@@ -398,7 +415,8 @@ function start() {
     $configs = include('config.php');
     echo "Replicating TAS Timetable\n";	
     // testLocalConn($configs->TAS);
-    replicateTimeTable($configs, null, null);
+    callInsertBookingURL(array(), $configs->RBS);
+    // replicateTimeTable($configs, null, null);
 }
 
 start();
