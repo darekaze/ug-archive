@@ -10,11 +10,11 @@ using namespace std;
 
 
 string findLCS(string X, string Y, string Z) {
-    int lx = X.length();
-    int ly = Y.length();
-    int lz = Z.length();
+    const int lx = X.length();
+    const int ly = Y.length();
+    const int lz = Z.length();
 
-    // set Score table and traceback table
+    // set Score table and traceback table (require g++ or c++11 above)
     int score[lx+1][ly+1][lz+1];
     uint8_t trace[lx+1][ly+1][lz+1];
     int a, b, c;
