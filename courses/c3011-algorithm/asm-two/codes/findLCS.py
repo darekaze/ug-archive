@@ -6,8 +6,12 @@ def findLCS(A, B, C):
     la, lb, lc = len(A), len(B), len(C)
 
     # set Score table and traceback table
-    score = [[[0 for _ in range(lc+1)] for _ in range(lb+1)] for _ in range(la+1)]
-    trace = [[[0 for _ in range(lc+1)] for _ in range(lb+1)] for _ in range(la+1)]
+    score = [[[0 for _ in range(lc+1)]
+             for _ in range(lb+1)]
+             for _ in range(la+1)]
+    trace = [[[0 for _ in range(lc+1)]
+             for _ in range(lb+1)]
+             for _ in range(la+1)]
 
     # Initialize base case
     for x in range(1, la+1):
@@ -57,13 +61,15 @@ def findLCS(A, B, C):
         elif trace[x][y][z] == IN:
             z -= 1
 
-    return res
+    return ''.join(res)
 
 
-def main():
-    str1, str2, str3 = "nine", "singing", "ninjas"
+def q2():
+    str1 = "nine"
+    str2 = "singing"
+    str3 = "nine"
     res = findLCS(str1, str2, str3)
     print(res)
 
 
-main()
+q2()
