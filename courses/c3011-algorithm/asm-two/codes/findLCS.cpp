@@ -8,7 +8,6 @@ using namespace std;
 #define LEFT    2
 #define IN      3
 
-
 string findLCS(string X, string Y, string Z) {
     const int lx = X.length();
     const int ly = Y.length();
@@ -40,26 +39,24 @@ string findLCS(string X, string Y, string Z) {
     }
 
     // Fill in the score and traceback table based on the recurrence for an LCS
-    for(a = 1; a < lx+1; a++) {
-        for(b = 1; b < ly+1; b++) {
-            for(c = 1; c < lz+1; c++) {
-                if(X[a-1] == Y[b-1] && X[a-1] == Z[c-1]) {
-                    score[a][b][c] = score[a-1][b-1][c-1] + 1;
-                    trace[a][b][c] = ULI;
-                }
-                else {
-                    // Find max
-                    score[a][b][c] = score[a-1][b][c];
-                    trace[a][b][c] = UP;
-                    if(score[a][b-1][c] >= score[a][b][c]) {
-                        score[a][b][c] = score[a][b-1][c];
-                        trace[a][b][c] = LEFT;
-                    }
-                    if (score[a][b][c-1] >= score[a][b][c]) {
-                        score[a][b][c] = score[a][b][c-1];
-                        trace[a][b][c] = IN;
-                    }
-                }
+    for(a = 1; a < lx+1; a++)
+    for(b = 1; b < ly+1; b++)
+    for(c = 1; c < lz+1; c++) {
+        if(X[a-1] == Y[b-1] && X[a-1] == Z[c-1]) {
+            score[a][b][c] = score[a-1][b-1][c-1] + 1;
+            trace[a][b][c] = ULI;
+        }
+        else {
+            // Find max
+            score[a][b][c] = score[a-1][b][c];
+            trace[a][b][c] = UP;
+            if(score[a][b-1][c] >= score[a][b][c]) {
+                score[a][b][c] = score[a][b-1][c];
+                trace[a][b][c] = LEFT;
+            }
+            if (score[a][b][c-1] >= score[a][b][c]) {
+                score[a][b][c] = score[a][b][c-1];
+                trace[a][b][c] = IN;
             }
         }
     }
