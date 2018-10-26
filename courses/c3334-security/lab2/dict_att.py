@@ -31,7 +31,7 @@ def cracker(challengeR, hiddenField):
             key = bytes(genKey(genSHA(line.strip(" \t\n\r"))))
             res = aesEncrypt(key, r)
             if res == hiddenField:
-              return line
+                return line
     return None
 
 
