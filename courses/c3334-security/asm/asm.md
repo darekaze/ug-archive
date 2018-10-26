@@ -101,3 +101,36 @@ Therefore, $d = 5$ and plaintext $M = C^d\ mod\ n = (2018)^{5}\ mod\ 16109 = 103
 
 ## Q6
 
+A secure online voting system needs to meet the following security requirement:
+
+#### Secure Authentication
+
+Authenticating remote user is one of the biggest difficulties as we need to ensure the real identity of the voter. In order to secure the authentication process, the system can adopt the 2-way authentication method which generates an one-time password at real time and sent to the voters through short message service when the voter login to the system. This can prevent the voter's identity accessed by other people.
+
+#### Secure connections
+
+The system needs to ensure that the communication tunnel between the voter and the system is secure. This can be done by using HTTPS which encrypts the communication between two ends using TLS. Also, the system can generate unique links for each active session to prevent the link being reused or duplicated by others.
+
+#### Anonymity
+
+The system needs to ensure the anonymity of the voting data, which all completed ballots inside the ballot box do not contain voters' identity information. This can protect the voter's privacy and prevent the ballot's identity retrieved by other people.
+
+#### Uniqueness
+
+The system should ensure that all voters can only vote once. To achieve this, the system can generate unique token for each voter and the token will be discard after the voter completes one successful ballot.
+
+
+#### Protecting critical infrastructure (The ballot box)
+
+The system should have a secure infrastructure which isolates the ballot box to the public as well as decentralizing the election process to multiple sub-systems, which only handle part of the election data to reduce the risk of data loss. Also, the system should have defensive mechanisms against various attacks such as Denial-of-service attacks to ensure the stability of the system.
+
+### Q7 1. 
+
+Security requirements:
+
+1. Payment Authentication
+2. Identity verification (non-payment)
+3. Verification of Account
+
+### Q7 2.
+
