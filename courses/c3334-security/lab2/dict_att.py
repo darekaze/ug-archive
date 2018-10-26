@@ -24,17 +24,29 @@ def aesEncrypt(key, text):
     return textBytes.hex()
 
 
-def cracker(guess, cr):
-    r = bytes(cr, 'utf-8')
-    key = bytes(genKey(genSHA(guess)))
-    res = aesEncrypt(key, r)
-    print(res)
+def cracker(challengeR, hiddenField):
+    r = bytes(challengeR, 'utf-8')
+    with open("english.txt", "r") as f:
+        for line in f:
+            key = bytes(genKey(genSHA(line.strip(" \t\n\r"))))
+            res = aesEncrypt(key, r)
+            if res == hiddenField:
+              return line
+    return None
 
 
 def main():
-    challengeR = "zRcfk9nLTIiKg0om"
-    guess = "Amanda"
-    cracker(guess, challengeR)
+    """
+    For testing
+    challengeR = zRcfk9nLTIiKg0om
+    hiddenField = 49a9e0285bdf602c7390c2c0ca737edd
+    """
+    challengeR = input("Please enter the challenge R: ")
+    hiddenField = input("Please enter the hidden field value: ")
+
+    ans = cracker(challengeR, hiddenField)
+    if ans:
+        print("Found! The password is {}".format(ans))
 
 
 main()
