@@ -103,13 +103,13 @@ Therefore, $d = 5$ and plaintext $M = C^d\ mod\ n = (2018)^{5}\ mod\ 16109 = 103
 
 A secure online voting system needs to meet the following security requirement:
 
-#### Secure Authentication
-
-Authenticating remote user is one of the biggest difficulties as we need to ensure the real identity of the voter. In order to secure the authentication process, the system can adopt the 2-way authentication method which generates an one-time password at real time and sent to the voters through short message service when the voter login to the system. This can prevent the voter's identity accessed by other people.
-
 #### Secure connections
 
 The system needs to ensure that the communication tunnel between the voter and the system is secure. This can be done by using HTTPS which encrypts the communication between two ends using TLS. Also, the system can generate unique links for each active session to prevent the link being reused or duplicated by others.
+
+#### Secure Authentication
+
+Authenticating remote user is one of the biggest difficulties as we need to ensure the real identity of the voter. In order to secure the authentication process, the system can adopt the 2-way authentication method which generates an one-time password at real time and sent to the voters through short message service when the voter login to the system. This can prevent the voter's identity accessed by other people.
 
 #### Anonymity
 
