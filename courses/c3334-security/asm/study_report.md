@@ -39,7 +39,7 @@ In my opinion, the future of AI integrated spam filter is bright as computers ca
 
 In conclusion, AI technologies open potentials to the future of cyber-security. AI-integrated spam filter is one of the greatest examples that demonstrates the effectiveness of AI technologies being used in cyber-security. As criminal's techniques evolve time by time, so do AIs evolve and adapt with the new changes. In this Big Data era, I believe that AIs can perform better in protecting us in the cyber world.
 
-## Reference
+## References
 
 Bhowmick A., Hazarika S.M. (2018) E-Mail Spam Filtering: A Review of Techniques and Trends. In: Kalam A., Das S., Sharma K. (eds) Advances in Electronics, Communication and Computing. Lecture Notes in Electrical Engineering, vol 443. Springer, Singapore
 

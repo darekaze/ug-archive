@@ -1,4 +1,4 @@
-# COMP 3334 Assignment 1
+# COMP 3334 Written Assignment
 
 JAHJA Darwin, 16094501d
 
@@ -97,7 +97,7 @@ Steps:
 | -3 |  490  |   10  |  7  | -1143 |  9 | -10 |  1633 |  1 |  1  |
 |  7 | -1143 |   9   | -10 |**1633**|**1**|   |       |    |     |
 
-Therefore, $d = 5$ and plaintext $M = C^d\ mod\ n = (2018)^{5}\ mod\ 16109 = 1037$.
+Therefore, $d = 1633$ and plaintext $M = C^d\ mod\ n = (2018)^{1633}\ mod\ 16109 = 9376$.
 
 ## Q6
 
@@ -129,4 +129,4 @@ The system implements a three-domain model to secure the Payment Authentication 
 
 ### Q7 2.
 
-The seller in the 3D-secure does not hold the digital certificate for the payment authentication process. Instead, it only holds the token for the authorization of the payment process sent by the banking card issuer.
+The Acquirer domain in the 3D-secure does not hold the digital certificate for the payment authentication process. It only responsible for acquiring the information of whether the money is paid to the the bank or to the merchant.
