@@ -11,17 +11,21 @@ This report will mainly discuss the AI's contributions to cyber-security by stud
 
 ## E-mails
 
-E-mail services have been commonly used not only for personal communication, but also for commercial advertisement in today's world. The high usage of e-mail has stimulated several cyber-security threats caused by spam e-mails, which include viruses, phishing messages, fraud schemes, explicit contents etc. (Bhowmick & Hazarika, 2018). To address these issues, Google Mail (GMail), one of the largest e-mail service providers (ESP), has integrated AI technology into its spam filter to protect its users from being victimized by cyber criminals ([4]).
+E-mail services have been commonly used not only for personal communication, but also for commercial advertisement in today's world. The high usage of e-mail has stimulated several cyber-security threats caused by spam e-mails, which include viruses, phishing messages, fraud schemes, explicit contents etc. (Bhowmick & Hazarika, 2018). To address these issues, companies and E-mail Service Providers (ESP) create and customize their own e-mail spam filters to block spam e-mail. Google Mail (GMail), one of the largest ESPs, has integrated AI technology into its spam filter to protect its users from being victimized by cyber criminals ([4]).
 
 The techniques used by e-mail spam filter can be categorized into two different types: the traditional SMTP approach and the newer machine learning approach, which the later uses machine learning classifier to detect whether the e-mail is spam or legitimate. It is consider to be more efficient and has more popularity as it can learn the patterns and the changes of the new spamming techniques automatically time by time, without manually configuring by humans ([1]).
 
 The machine learning spam filtering techniques can be further subcategories into content based and non-content based. For content based, the machine learning algorithm used varies base on its type. For example, *Naive Bayes Classifier* or *Support Vector Machine* (SVM) is used in text based contents to filter contents such as phishing messages and fraud schemes ([1]), while *Back Propagation Neural Networks* is used in image base contents to filter contents such as sexual images ([3]). For non-content based, *N-Grams Algorithm* is used to classify the e-mail based on the e-mail header, which consist of information such as the sender server IP address and the mail subject ([2]). This can prevent email abusing behaviors such as spambot attack and email bombing attack.
 
+With the integration of AI into e-mail spam filter, not only it can protects its users against cyber criminal, but it can also learn from the user's preferences and customize the received content. The aim is to provide a better spam-free, user-friendly experience for people to communicate.
+
 ## Voice Call
 
-Similar to e-mail, voice call is widely used for both personal communication and commercial activity. And this platform is targeted by  cyber criminals such as scammers and . With the rise of VoIP, ....
+Similar to e-mail, voice call is widely used for both personal communication and commercial activity, and it attracts cyber criminals to perform illegal activities such as scamming using the internet's information. As people implicitly or explicitly give out their personal information (PI) on the internet, cyber criminals may have the chance to utilize their PI and perform attacks ([5]). To solve this problem, besides educating the public to protect their PI, spam call filter has been made to block suspicious callers. Nowadays, companies such as Google and DialogTech build AIs that utilize machine learning and artificial neutral networks to detect and screen spam call ([6-7]).
 
-traditional phone call and voip
+
+
+phone call , voip
 
 voice recognition, transcript NLP, filter. 
 
@@ -49,7 +53,7 @@ https://www.nytimes.com/2016/02/25/fashion/a-robot-that-has-fun-at-telemarketers
 
 ## Conclusion
 
-AI: collecting data, big data, artificial neutral network, evolving technics
+AI: collecting data, big data, artificial neutral network, evolving techniques
 
 ## Reference
 
