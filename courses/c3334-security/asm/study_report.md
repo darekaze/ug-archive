@@ -15,43 +15,37 @@ E-mail services have been commonly used not only for personal communication, but
 
 The techniques used by e-mail spam filter can be categorized into two different types: the traditional SMTP approach and the newer machine learning approach, which the later uses machine learning classifier to detect whether the e-mail is spam or legitimate. It is consider to be more efficient and has more popularity as it can learn the patterns and the changes of the new spamming techniques automatically time by time, without manually configuring by humans ([1]).
 
-The machine learning spam filtering techniques can be further subcategories into content based and non-content based. For content based, the machine learning algorithm used varies base on its type. For example, *Naive Bayes Classifier* or *Support Vector Machine* (SVM) is used in text based contents to filter contents such as phishing messages and fraud schemes ([1]), while *Back Propagation Neural Networks* is used in image base contents to filter contents such as sexual images ([3]). For non-content based, *N-Grams Algorithm* is used to classify the e-mail based on the e-mail header, which consist of information such as the sender server IP address and the mail subject ([2]). This can prevent email abusing behaviors such as spambot attack and email bombing attack.
+The machine learning spam filtering techniques can be further subcategories into content based and non-content based. For content based, the machine learning algorithm used varies base on its type. For example, *Naive Bayes Classifier* or *Support Vector Machine* (SVM) is used in text based contents to filter contents such as phishing messages and fraud schemes ([1]), while *Back Propagation Neural Networks* is used in image base contents to filter explicit contents such as sexual images ([3]). For non-content based, *N-Grams Algorithm* is used to classify the e-mail based on the e-mail header, which consist of information such as the sender server IP address and the mail subject ([2]). This can prevent e-mail abusing behaviors such as spambot attack and e-mail bombing attack.
 
-With the integration of AI into e-mail spam filter, not only it can protects its users against cyber criminal, but it can also learn from the user's preferences and customize the received content. The aim is to provide a better spam-free, user-friendly experience for people to communicate.
+With the integration of AI into e-mail spam filter, not only it can protects its users against cyber criminal, but it can also learn from the user's preferences and customize the received content. The aim is to provide a better spam-free, user-friendly e-mail communication experience for people.
 
-## Voice Call
+## Voice Calls
 
-Similar to e-mail, voice call is widely used for both personal communication and commercial activity, and it attracts cyber criminals to perform illegal activities such as scamming using the internet's information. As people implicitly or explicitly give out their personal information (PI) on the internet, cyber criminals may have the chance to utilize their PI and perform attacks ([5]). To solve this problem, besides educating the public to protect their PI, spam call filter has been made to block suspicious callers. Nowadays, companies such as Google and DialogTech build AIs that utilize machine learning and artificial neutral networks to detect and screen spam call ([6-7]).
+Similar to e-mail, voice call is widely used for both personal communication and commercial activity, and it attracts cyber criminals to perform illegal activities such as scamming using the internet's information. As people implicitly or explicitly give out their personal information (PI) on the internet, cyber criminals may have the chance to utilize their PI and perform attacks ([5]). To solve this problem, besides educating the public to protect their PI, spam call filter has been made to block nuisance callers. Nowadays, companies such as Google and DialogTech build AIs that utilize machine learning and artificial neutral networks to detect and screen spam call ([6-8]).
 
+The techniques used to classify spam calls are similar to that in classifying spam e-mails. In addition to that, real time *Natural Language Processing* (NLP) is used to process the conversation in a call, which the *Automated Speech Recognition* and *Natural Language Understanding* in NLP convert the caller's speeches into text based dialogs, and then used by the machine learning classifier to identify whether the call is spam or not. ([9])
 
+Moreover, based on these techniques, spam call filter can also distinguish human and robot speakers. Taking Google Call Screen as an example, when the AI detect a robocall, it will keep dangling so that the robot may not be able to make a new call unless the current call is ended  ([8]). This can eliminate the chances for nuisance robocalls wasting people's resources and thus provide a spam-free experience. 
 
-phone call , voip
+## Social Media
 
-voice recognition, transcript NLP, filter. 
-
-https://arxiv.org/pdf/1804.02566.pdf
-
-call screen ()
-
-https://www.pocket-lint.com/apps/news/google/146018-google-call-screen-how-to-screen-spam-calls-with-google-assistant
-
-https://www.theregister.co.uk/2018/07/10/google_offers_to_leave_robocallers_dangling_on_the_telephone_line/
-
-## Social Media (don't need to talk too much)
+Besides e-mail and voice call, the majority of people nowadays use social media to communicate and share their lives with others. The posting content
 
 Similar technique mentioned in email part
 
 Just give examples
 
-## Future
+## Future Development
 
-develop  New era to fight back spammer , wasting their time
+In my opinion, the future of AI integrated spam filter is bright. develop  New era to fight back spammer , wasting their time
 
 An interesting one to mention: Re:Scam by Netsafe
 
 https://www.nytimes.com/2016/02/25/fashion/a-robot-that-has-fun-at-telemarketers-expense.html
 
-## Conclusion
+Another one: Jolly Roger:
+
+In conclusion, 
 
 AI: collecting data, big data, artificial neutral network, evolving techniques
 
@@ -66,5 +60,17 @@ Bhowmick A., Hazarika S.M. (2018) E-Mail Spam Filtering: A Review of Techniques 
 [3]Image Spam Classification Using Neural Network
 
 [4] https://www.wired.com/2015/07/google-says-ai-catches-99-9-percent-gmail-spam/
+
+[5]Identifying Personal Information in Internet Traffic
+https://dl.acm.org/citation.cfm?id=2817947
+
+[6]https://www.pocket-lint.com/apps/news/google/146018-google-call-screen-how-to-screen-spam-calls-with-google-assistant
+
+[7]https://www.theregister.co.uk/2018/07/10/google_offers_to_leave_robocallers_dangling_on_the_telephone_line/
+
+[8]
+https://www.dialogtech.com/solutions/products/spam-call-prevention
+
+[9]https://arxiv.org/pdf/1804.02566.pdf
 
 https://www.rescam.org/
