@@ -1,4 +1,8 @@
-from __future__ import absolute_import, division, unicode_literals
+'''
+@ JAHJA Darwin, 16094501d
+This program requires "pycrypto" module to run:
+pip3 install pycrypto
+'''
 from Crypto.Cipher import AES
 from Crypto.Hash import SHA
 
@@ -37,7 +41,7 @@ def cracker(challengeR, hiddenField):
 
 def main():
     """
-    For testing
+    -- For testing (Tested in linux environment)
     challengeR = zRcfk9nLTIiKg0om
     hiddenField = 49a9e0285bdf602c7390c2c0ca737edd
     """
@@ -46,7 +50,9 @@ def main():
 
     ans = cracker(challengeR, hiddenField)
     if ans:
-        print("Found! The password is {}".format(ans))
+        print("Found! The password is: {}".format(ans))
+    else:
+        print("Password not found in dict...")
 
 
 main()
