@@ -12,7 +12,7 @@ Identifiers: `i, a, b, c, d, var1`
 
 Constant:  1, 5, 6, 99, 2.0E12, 3E-12, 0.21
 
-Operators: `=, <, ==, +, /, ^, *`
+Operators: `= < == + / ^ *`
 
 Special symbols: `, {} () ;`
 
