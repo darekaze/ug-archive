@@ -28,4 +28,4 @@ For {a, b}, Regex for:
 
 ## 3. C program
 
-See q3.c
+See q3_tb.c
