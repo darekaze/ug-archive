@@ -88,7 +88,7 @@ static int  OwnADC = 0;    //;ADC 驱动是否拥有A/D 转换器资源的状态
 static volatile int ev_adc = 0; 
 static int  adc_data; 
 static struct clk *adc_clock;   
-DECLARE_MUTEX(ADC_LOCK);  //;声明全局信号量，以便和触摸屏驱动程序共享A/D 转换器
+DEFINE_SEMAPHORE(ADC_LOCK);  //;声明全局信号量，以便和触摸屏驱动程序共享A/D 转换器
 
 /*******************************************************
 与内核交互函数实现
@@ -117,11 +117,7 @@ int ADC_release(struct inode *inode, struct file *filp) {
     return 0;
 }
 
-int ADC_ioctl(struct inode *inode, struct file *filp, unsigned int cmd, unsigned long arg) {
-    return 0;
-}
-
-//也可以使用ADC_write来替代ADC_ioctl
+//使用ADC_write来替代ADC_ioctl
 ssize_t ADC_write(struct file *filp, const char __user *buf, size_t count, loff_t *f_pos) {
     return 0;
 }
@@ -155,7 +151,6 @@ ssize_t ADC_read(struct file *filp,char __user *buff,size_t size,loff_t *offp) {
 /*     文件操作结构体   */
 struct file_operations ADC_fops = {
     .owner = THIS_MODULE,
-    .ioctl = ADC_ioctl,
     .open = ADC_open,
     .write = ADC_write,
     .read =  ADC_read,
