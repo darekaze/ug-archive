@@ -13,7 +13,7 @@
 #include <linux/pagemap.h>
 #include <linux/device.h>
 #include <asm/io.h> 
-#include <mach/regs-gpio.h>    // 2.6.32
+#include <mach/regs-gpio.h>
 #include <mach/regs-irq.h>
 #include <linux/wait.h>  
 #include <asm/uaccess.h>  
@@ -26,6 +26,7 @@
 #include <linux/irq.h>
 #include <linux/irqreturn.h>
 #include <linux/interrupt.h>
+#include<linux/slab.h>
 
 // #undef DEBUG
 // //#define  DEBUG
