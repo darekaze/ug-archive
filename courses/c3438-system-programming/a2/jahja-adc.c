@@ -20,7 +20,7 @@
 #include <mach/regs-clock.h>
 #include <mach/regs-adc.h>
 #include <mach/regs-gpio.h>
-#include <plat/regs-timer.h>
+#include <plat/regs-timer.h> // check this one
 
 #undef DEBUG
 #ifdef DEBUG
@@ -160,7 +160,7 @@ static int __init dev_init(void)
 {
         int ret;
 
-        base_addr = ioremap(SAMSUNG_PA_ADC, 0x20);
+        base_addr = ioremap(SAMSUNG_PA_ADC, 0x20); // plat/adc
         if (base_addr == NULL) {
                 printk(KERN_ERR "Failed to remap register block\n");
                 return -ENOMEM;
