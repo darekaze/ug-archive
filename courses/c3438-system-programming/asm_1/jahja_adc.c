@@ -1,22 +1,13 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
-#include <linux/slab.h>
-#include <linux/input.h>
-#include <linux/init.h>
 #include <linux/fs.h>
-#include <linux/errno.h>
-#include <linux/delay.h>
-#include <linux/miscdevice.h>
 #include <linux/platform_device.h>
 #include <linux/cdev.h>
-#include <linux/device.h>
-
 #include <asm/uaccess.h>
 #include <plat/adc.h>
 
 #define ADC_SET_CHANNEL		0xc000fa01
 #define ADC_SET_ADCTSC		0xc000fa02
-
 #define DEVICE_NAME "jahjaADC"
 #define N_D         1           /*Number of Devices*/
 #define S_N         1           /*The start minor number*/
@@ -34,13 +25,12 @@ static struct cdev 	adc_cd;
 static ADC_DEV adcdev;
 static struct platform_device pd = {
   .name = "jahjaADC",
-  .id = 7
+  .id = 55
 };
 
 /* 
  * ---Functions---
  */
-
 static inline int exynos_adc_read_ch(void) {
   int ret;
 
@@ -88,7 +78,6 @@ static ssize_t op_adc_read(
   }
 }
 
-
 static long op_adc_ioctl(
   struct file *file, unsigned int cmd,
   unsigned long arg
@@ -106,10 +95,10 @@ static long op_adc_ioctl(
 }
 
 static struct file_operations jahja_adc = {
-  owner:    THIS_MODULE,
-  open:	    op_adc_open,
-  release:  op_adc_release,
-  read:     op_adc_read,
+  owner:          THIS_MODULE,
+  open:	          op_adc_open,
+  release:        op_adc_release,
+  read:           op_adc_read,
   unlocked_ioctl:	op_adc_ioctl
 };
 
@@ -118,11 +107,14 @@ static int __init jahja_adc_init(void) {
 
   mutex_init(&adcdev.lock);
   adcdev.client = s3c_adc_register(&pd, NULL, NULL, 0);
-
+  if (IS_ERR(adcdev.client)) {
+		printk("**ERR**: Cannot register adc\n");
+		return PTR_ERR(adcdev.client);
+	}
   /*Register a major number*/
   ret = alloc_chrdev_region(&devno, S_N, N_D, DEVICE_NAME);
   if(ret < 0) {
-    printk("Device " DEVICE_NAME " cannot get major number.\n");
+    printk("**ERR**: Device " DEVICE_NAME " cannot get major number.\n");
     return ret;
   }
   major = MAJOR(devno);
@@ -134,7 +126,7 @@ static int __init jahja_adc_init(void) {
   adc_cd.ops   = &jahja_adc;
   ret = cdev_add(&adc_cd, devno, N_D);
   if(ret) {
-    printk("Device " DEVICE_NAME " register fail.\n");
+    printk("**ERR**: Device " DEVICE_NAME " register fail.\n");
     return ret;
   }
   
@@ -153,5 +145,5 @@ module_init(jahja_adc_init);
 module_exit(jahja_adc_exit);
 
 MODULE_LICENSE("GPL");
-MODULE_AUTHOR("Darwin");
+MODULE_AUTHOR("JAHJADarwin");
 MODULE_DESCRIPTION("Char Driver Development: A/D Converter");
