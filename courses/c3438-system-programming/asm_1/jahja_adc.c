@@ -31,31 +31,31 @@ static struct platform_device pd = {
 /* 
  * ---Functions---
  */
-static inline int exynos_adc_read_ch(void) {
+static inline int op_adc_read_ch(void) {
   int ret;
 
   ret = mutex_lock_interruptible(&adcdev.lock);
-  if (ret < 0)
-    return ret;
-
+  if (ret < 0) return ret;
+  /* CRITICAL-ZONE-START */
   ret = s3c_adc_read(adcdev.client, adcdev.channel);
+  /* CRITICAL-ZONE-END */
   mutex_unlock(&adcdev.lock);
   return ret;
 }
 
-static inline void exynos_adc_set_channel(int channel) {
+static inline void op_adc_set_channel(int channel) {
   if (channel < 0 || channel > 9) return;
   adcdev.channel = channel;
 }
 
 static int op_adc_open(struct inode *inode, struct file *filp) {
-  exynos_adc_set_channel(0); // init the channel to 0
-  printk("Device " DEVICE_NAME "open.\n");
+  op_adc_set_channel(1); // init the channel to 1
+  printk(DEVICE_NAME " open.\n");
   return 0;
 }
 
 static int op_adc_release(struct inode *inode, struct file *filp) {
-  printk("Device " DEVICE_NAME " release.\n");
+  printk(DEVICE_NAME " release.\n");
   return 0;
 }
 
@@ -63,15 +63,21 @@ static ssize_t op_adc_read(
   struct file *filp, char *buffer,
   size_t count, loff_t *ppos
 ) {
-  char str[20];
-  int value;
+  char outputs[20];
+  char *argv[] = {"/bin/sh", "-c", "echo", "none", ">>", "/home/adc_output", NULL};
+  char *envp[] = {"HOME=/", "PATH=/sbin:/usr/sbin:/bin:/usr/bin", NULL};
+  int val;
   size_t len;
 
-  value = exynos_adc_read_ch();
+  val = op_adc_read_ch();
+  len = sprintf(outputs, "%d\n", val);
 
-  len = sprintf(str, "%d\n", value);
-  if (count >= len) {
-    int r = copy_to_user(buffer, str, len);
+  printk("Upcall file output\n");
+  argv[3] = outputs;
+  call_usermodehelper(argv[0], argv, envp, UMH_WAIT_PROC);
+
+  if (len <= count) {
+    int r = copy_to_user(buffer, outputs, len);
     return r ? r : len;
   } else {
     return -EINVAL;
@@ -84,7 +90,7 @@ static long op_adc_ioctl(
 ) {
   switch (cmd) {
     case ADC_SET_CHANNEL:
-      exynos_adc_set_channel(arg);
+      op_adc_set_channel(arg);
       break;
     case ADC_SET_ADCTSC:
       break; /* No Touchscreen */
@@ -94,7 +100,7 @@ static long op_adc_ioctl(
   return 0;
 }
 
-static struct file_operations jahja_adc = {
+static struct file_operations jahja_adc_fops = {
   owner:          THIS_MODULE,
   open:	          op_adc_open,
   release:        op_adc_release,
@@ -108,9 +114,9 @@ static int __init jahja_adc_init(void) {
   mutex_init(&adcdev.lock);
   adcdev.client = s3c_adc_register(&pd, NULL, NULL, 0);
   if (IS_ERR(adcdev.client)) {
-		printk("**ERR**: Cannot register adc\n");
-		return PTR_ERR(adcdev.client);
-	}
+    printk("**ERR**: Cannot register adc\n");
+    return PTR_ERR(adcdev.client);
+  }
   /*Register a major number*/
   ret = alloc_chrdev_region(&devno, S_N, N_D, DEVICE_NAME);
   if(ret < 0) {
@@ -121,9 +127,9 @@ static int __init jahja_adc_init(void) {
   printk("Device " DEVICE_NAME " initialized (Major Number -- %d).\n", major);
 
   /*Register a char device*/
-  cdev_init(&adc_cd, &jahja_adc);
+  cdev_init(&adc_cd, &jahja_adc_fops);
   adc_cd.owner = THIS_MODULE;
-  adc_cd.ops   = &jahja_adc;
+  adc_cd.ops   = &jahja_adc_fops;
   ret = cdev_add(&adc_cd, devno, N_D);
   if(ret) {
     printk("**ERR**: Device " DEVICE_NAME " register fail.\n");
@@ -138,7 +144,7 @@ static void __exit jahja_adc_exit(void) {
   unregister_chrdev_region(devno, N_D);
   s3c_adc_release(adcdev.client);
 
-  printk("Device " DEVICE_NAME " unloaded.\n");
+  printk(DEVICE_NAME " unloaded.\n");
 }
 
 module_init(jahja_adc_init);
