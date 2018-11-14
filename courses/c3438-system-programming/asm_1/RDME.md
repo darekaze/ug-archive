@@ -52,7 +52,7 @@ mknod /dev/jahja_adc c 250 1
 
 Now, the device is attached to the file. we can read from the file using unix system calls.
 
-9. Put "comp3438_lab4_app.c" in 'arm-board/' and compile the code.
+9. Put "jahja_app.c" in 'arm-board/' and compile the code.
 
 ```bash
 cd arm-board/
@@ -65,5 +65,3 @@ arm-linux-gnueabi-gcc -o jahja_app jahja_app.c
 cd /mnt/nfs/
 ./jahja_app
 ```
-
-![img]()
