@@ -13,8 +13,8 @@ const char *keywords[K_NUM] = {
 void lexAnalyze(FILE*);
 void checkKeyId(char*, FILE*);
 void checkNum(char*, FILE*);
-bool checkOperator(char);
-bool checkSeparator(char);
+void checkOperator(char);
+void checkSeparator(char);
 
 
 int main(int argc, char const *argv[]) {
@@ -39,8 +39,10 @@ void lexAnalyze(FILE *fp) {
   while ((c = fgetc(fp)) != EOF) {
     if (c == ' ' || c == '\n') continue;
 
-    if (isalpha(c)) checkKeyId(&c, fp);
-    else if (isdigit(c)) checkNum(&c, fp);
+    if (isalpha(c))
+      checkKeyId(&c, fp);
+    else if (isdigit(c))
+      checkNum(&c, fp);
 
     if (c == ' ' || c == '\n') continue;
     checkOperator(c);
@@ -93,8 +95,7 @@ void checkNum(char *c, FILE *fp) {
 }
 
 
-bool checkOperator(char c) {
-  bool f = true;
+void checkOperator(char c) {
   switch(c) {
     case '=':
       printf("ASSIGN\n"); break;
@@ -106,15 +107,12 @@ bool checkOperator(char c) {
       printf("MUL\n"); break;
     case '/':
       printf("DIV\n"); break;
-    default:
-      f = false;
   }
-  return f;
+  return;
 }
 
 
-bool checkSeparator(char c) {
-  bool f = true;
+void checkSeparator(char c) {
   switch(c) {
     case ';':
       printf("SEMICOLON\n"); break;
@@ -126,8 +124,6 @@ bool checkSeparator(char c) {
       printf("LBRACE\n"); break;
     case ')':
       printf("RBRACE\n"); break;
-    default:
-      f = false;
   }
-  return f;
+  return;
 }
