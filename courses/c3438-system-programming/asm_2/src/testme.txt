@@ -1,8 +1,8 @@
-var A, B, C, D, E;
+var apple, bee, cat3, d4Dog, Ell;
 begin
-  A = 20;
-  B = 11;
-  C = (A + B) / 3.75;
-  D = C * 2.2;
-  E = D - B;
+  apple = 20;
+  bee = 11;
+  cat3 = (apple + bee) / 3.75;
+  d4Dog = cat3 * 2.2;
+  Ell = d4Dog - bee;
 end.
